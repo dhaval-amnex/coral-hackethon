@@ -9,9 +9,10 @@ def create_judge_pack(source_dir: Path, output_zip: Path) -> Path:
     base = output_zip.with_suffix("")
     archive = shutil.make_archive(str(base), "zip", root_dir=str(source_dir))
     created = Path(archive)
-    if created != output_zip:
+    # Normalize path comparisons on Windows where relative vs absolute forms can differ.
+    if created.resolve() != output_zip.resolve():
         if output_zip.exists():
             output_zip.unlink()
-        created.replace(output_zip)
+        if created.exists():
+            created.replace(output_zip)
     return output_zip
-
