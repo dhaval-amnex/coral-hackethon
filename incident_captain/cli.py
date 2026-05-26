@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
 from .metrics import append_run_metrics
@@ -80,6 +81,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="output/report",
         help="Directory for generated report files.",
     )
+
+    bundle = sub.add_parser("submission-bundle", help="Create a judge-ready artifact bundle.")
+    bundle.add_argument("--incident-id", required=True, help="Incident identifier to bundle.")
+    bundle.add_argument("--output-dir", default="output", help="Directory containing brief/workflow/metrics.")
+    bundle.add_argument("--report-dir", default="output/report", help="Directory containing demo report artifacts.")
+    bundle.add_argument("--bundle-root", default="output/bundles", help="Destination root for bundle folders.")
     return parser
 
 
@@ -184,6 +191,18 @@ def cmd_demo_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_submission_bundle(args: argparse.Namespace) -> int:
+    manifest = create_submission_bundle(
+        incident_id=args.incident_id,
+        output_dir=Path(args.output_dir),
+        report_dir=Path(args.report_dir),
+        bundle_root=Path(args.bundle_root),
+        include_docs_dir=Path("deliverables/docs"),
+    )
+    print(json.dumps(manifest, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -196,6 +215,8 @@ def main() -> int:
             return cmd_snapshot_catalog(args)
         if args.command == "demo-report":
             return cmd_demo_report(args)
+        if args.command == "submission-bundle":
+            return cmd_submission_bundle(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:

@@ -71,6 +71,11 @@ Generate demo report from run metrics:
 python -m incident_captain.cli demo-report --metrics-log output/run_metrics.jsonl --output-dir output/report
 ```
 
+Create final submission bundle:
+```bash
+python -m incident_captain.cli submission-bundle --incident-id INC-1001 --output-dir output --report-dir output/report --bundle-root output/bundles
+```
+
 Outputs:
 - `output/INC-1234.json`
 - `output/INC-1234.md`
