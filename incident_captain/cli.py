@@ -3,12 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-import time
 
-from .briefing import compose_brief, run_incident_queries
 from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
 from .metrics import append_run_metrics
+from .orchestration import run_deterministic_workflow, write_workflow_log
 from .reporting import write_demo_report
 
 
@@ -49,6 +48,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="output/run_metrics.jsonl",
         help="Path to JSONL metrics log.",
     )
+    analyze.add_argument(
+        "--workflow-log",
+        default="output/workflow_log.json",
+        help="Path to workflow step log JSON.",
+    )
 
     health = sub.add_parser("health", help="Run source health checks.")
     health.add_argument(
@@ -80,26 +84,30 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
-    started = time.perf_counter()
     coral = CoralClient(coral_bin=args.coral_bin)
     sql_dir = Path(args.sql_dir)
     mock_data_dir = Path(args.mock_data_dir) if args.mock_data_dir else None
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    runs, errors = run_incident_queries(coral, sql_dir, args.incident_id, mock_data_dir)
-    brief = compose_brief(args.incident_id, runs, errors)
+    workflow = run_deterministic_workflow(
+        coral=coral,
+        incident_id=args.incident_id,
+        sql_dir=sql_dir,
+        mock_data_dir=mock_data_dir,
+    )
+    brief = workflow.brief
 
     json_path = output_dir / f"{args.incident_id}.json"
     md_path = output_dir / f"{args.incident_id}.md"
     write_json(json_path, brief)
     write_markdown(md_path, brief)
-    total_duration_ms = int((time.perf_counter() - started) * 1000)
+    write_workflow_log(Path(args.workflow_log), workflow.workflow_log)
     append_run_metrics(
         Path(args.metrics_log),
         incident_id=args.incident_id,
         mode="mock" if mock_data_dir else "live",
-        total_duration_ms=total_duration_ms,
+        total_duration_ms=workflow.total_duration_ms,
         brief=brief,
     )
 
@@ -116,6 +124,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     print(f"\nWrote: {json_path}")
     print(f"Wrote: {md_path}")
     print(f"Wrote metrics: {args.metrics_log}")
+    print(f"Wrote workflow log: {args.workflow_log}")
     return 0
 
 

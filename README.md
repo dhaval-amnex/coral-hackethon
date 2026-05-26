@@ -56,6 +56,11 @@ Capture run metrics:
 python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --metrics-log output/run_metrics.jsonl
 ```
 
+Capture deterministic workflow trace:
+```bash
+python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --workflow-log output/workflow_log.json
+```
+
 Catalog snapshot (when Coral access is available):
 ```bash
 python -m incident_captain.cli snapshot-catalog --output-dir output/catalog
