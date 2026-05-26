@@ -91,6 +91,11 @@ Generate judge scorecard:
 python -m incident_captain.cli scorecard --report-dir output/report --quality-gate-file output/report/quality_gate.json --output-dir output/report
 ```
 
+Check live submission readiness:
+```bash
+python -m incident_captain.cli live-readiness --root . --output-dir output/report
+```
+
 One-command full demo pipeline:
 ```bash
 python -m incident_captain.cli demo-run --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
