@@ -51,6 +51,16 @@ Executive-view console output for demos:
 python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --view executive
 ```
 
+Capture run metrics:
+```bash
+python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --metrics-log output/run_metrics.jsonl
+```
+
+Catalog snapshot (when Coral access is available):
+```bash
+python -m incident_captain.cli snapshot-catalog --output-dir output/catalog
+```
+
 Outputs:
 - `output/INC-1234.json`
 - `output/INC-1234.md`
