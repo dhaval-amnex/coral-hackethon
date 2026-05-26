@@ -7,6 +7,7 @@ from pathlib import Path
 from .batch import write_batch_summary
 from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
+from .doctor import build_doctor_report
 from .exporters import write_json, write_markdown
 from .external_kit import write_external_kit
 from .finalize import write_final_summary
@@ -197,6 +198,9 @@ def build_parser() -> argparse.ArgumentParser:
     unblock_cmd = sub.add_parser("live-unblock", help="Run unblock checks after importing live evidence.")
     unblock_cmd.add_argument("--root", default=".", help="Project root path.")
     unblock_cmd.add_argument("--report-dir", default="output/report", help="Directory for report artifacts.")
+
+    doctor_cmd = sub.add_parser("doctor", help="Run local environment diagnostics.")
+    doctor_cmd.add_argument("--root", default=".", help="Project root path.")
     return parser
 
 
@@ -629,6 +633,12 @@ def cmd_live_unblock(args: argparse.Namespace) -> int:
     return 0 if summary["go_for_live_submission"] else 1
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    report = build_doctor_report(Path(args.root))
+    print(json.dumps(report, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -669,6 +679,8 @@ def main() -> int:
             return cmd_external_kit(args)
         if args.command == "live-unblock":
             return cmd_live_unblock(args)
+        if args.command == "doctor":
+            return cmd_doctor(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
