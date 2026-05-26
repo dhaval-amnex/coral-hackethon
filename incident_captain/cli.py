@@ -14,6 +14,7 @@ from .external_kit import write_external_kit
 from .finalize import write_final_summary
 from .impact import write_impact_report
 from .import_evidence import import_live_evidence
+from .judge_pack import create_judge_pack
 from .live_unblock import write_live_unblock_summary
 from .metrics import append_run_metrics
 from .next_actions import write_next_actions
@@ -218,6 +219,11 @@ def build_parser() -> argparse.ArgumentParser:
     dash_cmd = sub.add_parser("status-dashboard", help="Generate one-page status dashboard from reports.")
     dash_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
     dash_cmd.add_argument("--output-file", default="output/report/status_dashboard.md", help="Output markdown file.")
+
+    pack_cmd = sub.add_parser("judge-pack", help="Create a single ZIP pack for judge submission/review.")
+    pack_cmd.add_argument("--source-dir", default="", help="Source directory to zip (defaults to latest bundle).")
+    pack_cmd.add_argument("--bundle-root", default="output/bundles", help="Bundle root to auto-pick latest from.")
+    pack_cmd.add_argument("--output-zip", default="output/judge_pack.zip", help="Output zip file path.")
     return parser
 
 
@@ -698,6 +704,31 @@ def cmd_status_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _latest_bundle_dir(bundle_root: Path) -> Path | None:
+    if not bundle_root.exists():
+        return None
+    dirs = [p for p in bundle_root.iterdir() if p.is_dir() and p.name.startswith("submission_bundle_")]
+    if not dirs:
+        return None
+    dirs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return dirs[0]
+
+
+def cmd_judge_pack(args: argparse.Namespace) -> int:
+    source_dir = Path(args.source_dir) if args.source_dir else None
+    if source_dir is None:
+        source_dir = _latest_bundle_dir(Path(args.bundle_root))
+        if source_dir is None:
+            print("Error: no source-dir provided and no submission bundle found.")
+            return 1
+    if not source_dir.exists():
+        print(f"Error: source directory does not exist: {source_dir}")
+        return 1
+    out = create_judge_pack(source_dir, Path(args.output_zip))
+    print(json.dumps({"source_dir": str(source_dir), "output_zip": str(out)}, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -744,6 +775,8 @@ def main() -> int:
             return cmd_close_live_loop(args)
         if args.command == "status-dashboard":
             return cmd_status_dashboard(args)
+        if args.command == "judge-pack":
+            return cmd_judge_pack(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:

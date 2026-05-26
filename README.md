@@ -141,6 +141,11 @@ Generate one-page status dashboard:
 python -m incident_captain.cli status-dashboard --report-dir output/report --output-file output/report/status_dashboard.md
 ```
 
+Create judge-ready ZIP pack:
+```bash
+python -m incident_captain.cli judge-pack --bundle-root output/bundles --output-zip output/judge_pack.zip
+```
+
 One-command full demo pipeline:
 ```bash
 python -m incident_captain.cli demo-run --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
