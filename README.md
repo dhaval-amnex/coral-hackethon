@@ -116,6 +116,11 @@ Import live evidence from unrestricted machine:
 python -m incident_captain.cli import-live-evidence --tables-file <path\\catalog_tables.json> --columns-file <path\\catalog_columns.json> --filters-file <path\\catalog_filters.json> --live-metrics-file <path\\run_metrics_live.jsonl> --output-root output
 ```
 
+Verify imported live evidence before import:
+```bash
+python -m incident_captain.cli evidence-verify --tables-file <path\\catalog_tables.json> --columns-file <path\\catalog_columns.json> --filters-file <path\\catalog_filters.json> --live-metrics-file <path\\run_metrics_live.jsonl> --output-file output/report/evidence_verify.json
+```
+
 Generate external evidence collection kit:
 ```bash
 python -m incident_captain.cli external-kit --output-dir output/external_kit

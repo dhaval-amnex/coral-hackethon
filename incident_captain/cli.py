@@ -9,6 +9,7 @@ from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
 from .dashboard import write_dashboard
 from .doctor import build_doctor_report
+from .evidence_verify import verify_evidence
 from .exporters import write_json, write_markdown
 from .external_kit import write_external_kit
 from .finalize import write_final_summary
@@ -195,6 +196,13 @@ def build_parser() -> argparse.ArgumentParser:
     import_cmd.add_argument("--filters-file", required=True, help="Path to catalog_filters.json from live environment.")
     import_cmd.add_argument("--live-metrics-file", required=True, help="Path to live run_metrics.jsonl.")
     import_cmd.add_argument("--output-root", default="output", help="Project output root directory.")
+
+    verify_cmd = sub.add_parser("evidence-verify", help="Verify external live evidence file quality.")
+    verify_cmd.add_argument("--tables-file", required=True, help="Path to catalog_tables.json from live environment.")
+    verify_cmd.add_argument("--columns-file", required=True, help="Path to catalog_columns.json from live environment.")
+    verify_cmd.add_argument("--filters-file", required=True, help="Path to catalog_filters.json from live environment.")
+    verify_cmd.add_argument("--live-metrics-file", required=True, help="Path to live run_metrics.jsonl.")
+    verify_cmd.add_argument("--output-file", default="output/report/evidence_verify.json", help="Verification report JSON.")
 
     kit_cmd = sub.add_parser("external-kit", help="Generate a handoff kit for collecting live evidence externally.")
     kit_cmd.add_argument("--output-dir", default="output/external_kit", help="Directory for generated kit files.")
@@ -625,6 +633,21 @@ def cmd_import_live_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_evidence_verify(args: argparse.Namespace) -> int:
+    report = verify_evidence(
+        tables_file=Path(args.tables_file),
+        columns_file=Path(args.columns_file),
+        filters_file=Path(args.filters_file),
+        live_metrics_file=Path(args.live_metrics_file),
+    )
+    out = Path(args.output_file)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
+    print(f"Wrote: {out}")
+    return 0 if report["passed"] else 1
+
+
 def cmd_external_kit(args: argparse.Namespace) -> int:
     result = write_external_kit(Path(args.output_dir))
     print(json.dumps(result, indent=2))
@@ -791,6 +814,8 @@ def main() -> int:
             return cmd_next_actions(args)
         if args.command == "import-live-evidence":
             return cmd_import_live_evidence(args)
+        if args.command == "evidence-verify":
+            return cmd_evidence_verify(args)
         if args.command == "external-kit":
             return cmd_external_kit(args)
         if args.command == "live-unblock":
