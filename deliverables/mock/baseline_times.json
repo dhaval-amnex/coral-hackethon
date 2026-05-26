@@ -1,0 +1,13 @@
+[
+  {
+    "scenario": "checkout-incident-a",
+    "manual_minutes": 28,
+    "assisted_minutes": 9
+  },
+  {
+    "scenario": "checkout-incident-b",
+    "manual_minutes": 34,
+    "assisted_minutes": 11
+  }
+]
+

@@ -76,6 +76,11 @@ Create final submission bundle:
 python -m incident_captain.cli submission-bundle --incident-id INC-1001 --output-dir output --report-dir output/report --bundle-root output/bundles
 ```
 
+Generate impact report (time saved):
+```bash
+python -m incident_captain.cli impact-report --baseline-file deliverables/mock/baseline_times.json --metrics-log output/run_metrics.jsonl --output-dir output/report
+```
+
 Outputs:
 - `output/INC-1234.json`
 - `output/INC-1234.md`

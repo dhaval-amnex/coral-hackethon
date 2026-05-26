@@ -7,6 +7,7 @@ from pathlib import Path
 from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
+from .impact import write_impact_report
 from .metrics import append_run_metrics
 from .orchestration import run_deterministic_workflow, write_workflow_log
 from .reporting import write_demo_report
@@ -87,6 +88,11 @@ def build_parser() -> argparse.ArgumentParser:
     bundle.add_argument("--output-dir", default="output", help="Directory containing brief/workflow/metrics.")
     bundle.add_argument("--report-dir", default="output/report", help="Directory containing demo report artifacts.")
     bundle.add_argument("--bundle-root", default="output/bundles", help="Destination root for bundle folders.")
+
+    impact = sub.add_parser("impact-report", help="Generate time-saved impact report.")
+    impact.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline JSON file.")
+    impact.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Run metrics JSONL file.")
+    impact.add_argument("--output-dir", default="output/report", help="Directory for impact report output.")
     return parser
 
 
@@ -203,6 +209,22 @@ def cmd_submission_bundle(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_impact_report(args: argparse.Namespace) -> int:
+    out_dir = Path(args.output_dir)
+    out_json = out_dir / "impact_report.json"
+    out_md = out_dir / "impact_report.md"
+    summary = write_impact_report(
+        baseline_path=Path(args.baseline_file),
+        metrics_path=Path(args.metrics_log),
+        out_json=out_json,
+        out_md=out_md,
+    )
+    print(json.dumps(summary, indent=2))
+    print(f"Wrote: {out_json}")
+    print(f"Wrote: {out_md}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -217,6 +239,8 @@ def main() -> int:
             return cmd_demo_report(args)
         if args.command == "submission-bundle":
             return cmd_submission_bundle(args)
+        if args.command == "impact-report":
+            return cmd_impact_report(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
