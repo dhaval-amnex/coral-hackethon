@@ -20,6 +20,7 @@ from .live_unblock import write_live_unblock_summary
 from .metrics import append_run_metrics
 from .next_actions import write_next_actions
 from .orchestration import run_deterministic_workflow, write_workflow_log
+from .plan_audit import build_plan_audit
 from .progress import write_progress_report
 from .quality import run_quality_gate
 from .readiness import write_live_readiness_report
@@ -229,6 +230,10 @@ def build_parser() -> argparse.ArgumentParser:
     handoff_cmd = sub.add_parser("handoff-note", help="Generate a concise handoff markdown from latest reports.")
     handoff_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
     handoff_cmd.add_argument("--output-file", default="output/report/handoff_note.md", help="Output markdown file.")
+
+    audit_cmd = sub.add_parser("plan-audit", help="Audit current state against implementation phases.")
+    audit_cmd.add_argument("--root", default=".", help="Project root path.")
+    audit_cmd.add_argument("--output-file", default="output/report/plan_audit.json", help="Output JSON file.")
     return parser
 
 
@@ -740,6 +745,16 @@ def cmd_handoff_note(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_plan_audit(args: argparse.Namespace) -> int:
+    payload = build_plan_audit(Path(args.root))
+    out = Path(args.output_file)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(json.dumps(payload, indent=2))
+    print(f"Wrote: {out}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -790,6 +805,8 @@ def main() -> int:
             return cmd_judge_pack(args)
         if args.command == "handoff-note":
             return cmd_handoff_note(args)
+        if args.command == "plan-audit":
+            return cmd_plan_audit(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
