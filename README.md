@@ -51,4 +51,3 @@ Replace placeholder table/column names in `deliverables/sql/*.sql` with your liv
 coral sql "SELECT schema_name, table_name FROM coral.tables ORDER BY 1,2"
 coral sql "SELECT schema_name, table_name, column_name FROM coral.columns ORDER BY 1,2,3"
 ```
-
