@@ -13,6 +13,7 @@ from .metrics import append_run_metrics
 from .orchestration import run_deterministic_workflow, write_workflow_log
 from .quality import run_quality_gate
 from .reporting import write_demo_report
+from .scorecard import write_scorecard
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -131,6 +132,15 @@ def build_parser() -> argparse.ArgumentParser:
     batch.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
     batch.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     batch.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+
+    scorecard = sub.add_parser("scorecard", help="Generate judge-facing scorecard from reports.")
+    scorecard.add_argument("--report-dir", default="output/report", help="Directory containing demo and impact reports.")
+    scorecard.add_argument(
+        "--quality-gate-file",
+        default="output/report/quality_gate.json",
+        help="Path to quality gate result JSON file.",
+    )
+    scorecard.add_argument("--output-dir", default="output/report", help="Directory for scorecard output.")
     return parser
 
 
@@ -272,6 +282,10 @@ def cmd_quality_gate(args: argparse.Namespace) -> int:
         min_improvement_percent=args.min_improvement_percent,
     )
     print(json.dumps(result, indent=2))
+    qg_path = Path(args.report_dir) / "quality_gate.json"
+    qg_path.parent.mkdir(parents=True, exist_ok=True)
+    qg_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(f"Wrote: {qg_path}")
     return 0 if result["passed"] else 1
 
 
@@ -377,6 +391,22 @@ def cmd_batch_run(args: argparse.Namespace) -> int:
     return 0 if summary["failed"] == 0 else 1
 
 
+def cmd_scorecard(args: argparse.Namespace) -> int:
+    out_dir = Path(args.output_dir)
+    out_json = out_dir / "scorecard.json"
+    out_md = out_dir / "scorecard.md"
+    scorecard = write_scorecard(
+        report_dir=Path(args.report_dir),
+        quality_gate_path=Path(args.quality_gate_file),
+        out_json=out_json,
+        out_md=out_md,
+    )
+    print(json.dumps(scorecard, indent=2))
+    print(f"Wrote: {out_json}")
+    print(f"Wrote: {out_md}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -399,6 +429,8 @@ def main() -> int:
             return cmd_demo_run(args)
         if args.command == "batch-run":
             return cmd_batch_run(args)
+        if args.command == "scorecard":
+            return cmd_scorecard(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
