@@ -46,5 +46,7 @@ def write_markdown(path: Path, brief: IncidentBrief) -> None:
     lines.extend(["", "## Recommended Actions"])
     lines.extend([f"- {a}" for a in brief.recommended_actions])
 
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    lines.extend(["", "## Executive Summary"])
+    lines.extend([f"- {s}" for s in brief.executive_summary])
 
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")

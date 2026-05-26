@@ -31,9 +31,24 @@ pip install pytest
 incident-captain health --sources pagerduty github slack datadog
 ```
 
+If your machine cannot run Coral source commands, use offline mock mode:
+```bash
+python -m incident_captain.cli health --mock-data-dir deliverables/mock
+```
+
 ## Run analysis
 ```bash
 incident-captain analyze --incident-id INC-1234
+```
+
+Offline mock run:
+```bash
+python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock
+```
+
+Executive-view console output for demos:
+```bash
+python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --view executive
 ```
 
 Outputs:

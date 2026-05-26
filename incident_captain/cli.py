@@ -20,6 +20,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="deliverables/sql",
         help="Directory containing SQL templates.",
     )
+    parser.add_argument(
+        "--mock-data-dir",
+        default="",
+        help="Optional directory containing mock JSON files per query name.",
+    )
 
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -29,6 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         default="output",
         help="Directory for generated artifacts.",
+    )
+    analyze.add_argument(
+        "--view",
+        choices=["full", "executive"],
+        default="full",
+        help="Console output style.",
     )
 
     health = sub.add_parser("health", help="Run source health checks.")
@@ -44,10 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
 def cmd_analyze(args: argparse.Namespace) -> int:
     coral = CoralClient(coral_bin=args.coral_bin)
     sql_dir = Path(args.sql_dir)
+    mock_data_dir = Path(args.mock_data_dir) if args.mock_data_dir else None
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    runs, errors = run_incident_queries(coral, sql_dir, args.incident_id)
+    runs, errors = run_incident_queries(coral, sql_dir, args.incident_id, mock_data_dir)
     brief = compose_brief(args.incident_id, runs, errors)
 
     json_path = output_dir / f"{args.incident_id}.json"
@@ -55,13 +67,37 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     write_json(json_path, brief)
     write_markdown(md_path, brief)
 
-    print(json.dumps(brief.to_dict(), indent=2))
+    if args.view == "executive":
+        payload = {
+            "incident_id": brief.incident_id,
+            "confidence": brief.confidence,
+            "executive_summary": brief.executive_summary,
+            "recommended_actions": brief.recommended_actions[:3],
+        }
+        print(json.dumps(payload, indent=2))
+    else:
+        print(json.dumps(brief.to_dict(), indent=2))
     print(f"\nWrote: {json_path}")
     print(f"Wrote: {md_path}")
     return 0
 
 
 def cmd_health(args: argparse.Namespace) -> int:
+    if args.mock_data_dir:
+        mock_data_dir = Path(args.mock_data_dir)
+        required = [
+            "active_incidents.json",
+            "deploy_correlation.json",
+            "telemetry_context.json",
+            "team_comms.json",
+            "final_dataset.json",
+        ]
+        status = {}
+        for file_name in required:
+            status[file_name] = "ok" if (mock_data_dir / file_name).exists() else "missing"
+        print(json.dumps(status, indent=2))
+        return 0 if all(v == "ok" for v in status.values()) else 1
+
     coral = CoralClient(coral_bin=args.coral_bin)
     status = coral.source_health(args.sources)
     print(json.dumps(status, indent=2))

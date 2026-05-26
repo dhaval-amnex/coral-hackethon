@@ -1,0 +1,11 @@
+[
+  {
+    "incident_id": "INC-1001",
+    "title": "Checkout API elevated error rate",
+    "urgency": "high",
+    "status": "triggered",
+    "service_id": "checkout",
+    "created_at": "2026-05-26T08:30:00Z",
+    "url": "https://pagerduty.example/incidents/INC-1001"
+  }
+]

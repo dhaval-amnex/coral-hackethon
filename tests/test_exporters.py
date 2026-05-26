@@ -14,6 +14,7 @@ def test_write_markdown(tmp_path: Path) -> None:
         owners=["alice"],
         evidence=[Evidence(type="deploy", detail="deploy detail", link="http://example")],
         recommended_actions=["action 1"],
+        executive_summary=["line 1", "line 2", "line 3", "line 4", "line 5", "line 6"],
     )
     out = tmp_path / "brief.md"
     write_markdown(out, brief)
@@ -21,4 +22,5 @@ def test_write_markdown(tmp_path: Path) -> None:
     assert "# Incident Brief: INC-9" in text
     assert "deploy detail" in text
     assert "action 1" in text
-
+    assert "## Executive Summary" in text
+    assert "line 6" in text

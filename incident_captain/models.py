@@ -21,6 +21,7 @@ class IncidentBrief:
     owners: list[str] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
     recommended_actions: list[str] = field(default_factory=list)
+    executive_summary: list[str] = field(default_factory=list)
     diagnostics: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -36,6 +37,6 @@ class IncidentBrief:
                 for e in self.evidence
             ],
             "recommended_actions": self.recommended_actions,
+            "executive_summary": self.executive_summary,
             "diagnostics": self.diagnostics,
         }
-

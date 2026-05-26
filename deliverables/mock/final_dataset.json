@@ -1,0 +1,23 @@
+[
+  {
+    "incident_id": "INC-1001",
+    "title": "Checkout API elevated error rate",
+    "urgency": "high",
+    "status": "triggered",
+    "created_at": "2026-05-26T08:30:00Z",
+    "repo": "checkout-service",
+    "sha": "abc123def",
+    "author": "alice",
+    "deployed_at": "2026-05-26T08:10:00Z",
+    "metric_name": "error_rate",
+    "value": 13.8,
+    "metric_ts": "2026-05-26T08:35:00Z",
+    "channel_name": "#incidents",
+    "user_name": "bob",
+    "comms_ts": "2026-05-26T08:40:00Z",
+    "text": "Errors started right after deploy abc123def",
+    "incident_url": "https://pagerduty.example/incidents/INC-1001",
+    "deploy_url": "https://github.com/org/checkout/deployments/1",
+    "service": "checkout"
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "service": "checkout",
+    "metric_name": "error_rate",
+    "value": 13.8,
+    "timestamp": "2026-05-26T08:35:00Z",
+    "tags": "env:prod"
+  },
+  {
+    "service": "checkout",
+    "metric_name": "p95_latency",
+    "value": 1900,
+    "timestamp": "2026-05-26T08:37:00Z",
+    "tags": "env:prod"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "channel_name": "#incidents",
+    "user_name": "bob",
+    "ts": "2026-05-26T08:40:00Z",
+    "text": "Errors started right after deploy abc123def",
+    "thread_ts": "2026-05-26T08:40:00Z"
+  }
+]

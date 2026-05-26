@@ -1,0 +1,12 @@
+[
+  {
+    "incident_id": "INC-1001",
+    "title": "Checkout API elevated error rate",
+    "repo": "checkout-service",
+    "sha": "abc123def",
+    "author": "alice",
+    "deployed_at": "2026-05-26T08:10:00Z",
+    "environment": "production",
+    "deploy_url": "https://github.com/org/checkout/deployments/1"
+  }
+]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 from typing import Any
 
 from .coral import CoralClient, CoralError, QueryRun, render_sql_from_template
@@ -17,11 +18,26 @@ QUERY_FILES = [
 
 
 def run_incident_queries(
-    coral: CoralClient, sql_dir: Path, incident_id: str
+    coral: CoralClient, sql_dir: Path, incident_id: str, mock_data_dir: Path | None = None
 ) -> tuple[list[QueryRun], list[str]]:
     runs: list[QueryRun] = []
     errors: list[str] = []
     for name, file_name in QUERY_FILES:
+        if mock_data_dir is not None:
+            mock_file = mock_data_dir / f"{name}.json"
+            if not mock_file.exists():
+                errors.append(f"missing mock data: {mock_file}")
+                continue
+            try:
+                rows = json.loads(mock_file.read_text(encoding="utf-8"))
+                if not isinstance(rows, list):
+                    errors.append(f"invalid mock data format: {mock_file}")
+                    continue
+                runs.append(QueryRun(name=name, rows=rows, duration_ms=1))
+            except json.JSONDecodeError as exc:
+                errors.append(f"invalid mock JSON {mock_file}: {exc}")
+            continue
+
         path = sql_dir / file_name
         if not path.exists():
             errors.append(f"missing SQL template: {file_name}")
@@ -53,6 +69,32 @@ def _confidence(num_query_failures: int, evidence_count: int) -> str:
     if num_query_failures > 0 or evidence_count <= 2:
         return "medium"
     return "high"
+
+
+def _make_executive_summary(
+    incident_id: str,
+    confidence: str,
+    cause: str,
+    services: list[str],
+    owners: list[str],
+    evidence_count: int,
+    has_errors: bool,
+) -> list[str]:
+    service_text = ", ".join(services[:3]) if services else "unknown services"
+    owner_text = ", ".join(owners[:2]) if owners else "on-call owner pending"
+    risk = "high" if confidence == "low" else ("medium" if confidence == "medium" else "controlled")
+    mitigation = "rollback candidate deploy and validate key metrics" if evidence_count else "restore source visibility and re-run analysis"
+    next_update = "15 minutes" if confidence != "low" else "10 minutes"
+    data_quality = "partial" if has_errors else "good"
+
+    return [
+        f"Incident {incident_id}: active service degradation detected.",
+        f"Impacted scope: {service_text}.",
+        f"Most likely trigger: {cause}",
+        f"Current risk level: {risk} confidence ({confidence}), data quality: {data_quality}.",
+        f"Current ownership: {owner_text}; immediate action: {mitigation}.",
+        f"Next update ETA: {next_update}.",
+    ]
 
 
 def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> IncidentBrief:
@@ -135,6 +177,16 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
     if errors:
         actions.append("Fix failing source queries to improve confidence and coverage.")
 
+    executive_summary = _make_executive_summary(
+        incident_id=incident_id,
+        confidence=confidence,
+        cause=cause,
+        services=services,
+        owners=owners,
+        evidence_count=len(evidence),
+        has_errors=bool(errors),
+    )
+
     return IncidentBrief(
         incident_id=incident_id,
         summary=summary,
@@ -144,5 +196,6 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
         owners=owners[:8],
         evidence=evidence,
         recommended_actions=actions,
+        executive_summary=executive_summary,
         diagnostics=diagnostics,
     )
