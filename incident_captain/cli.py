@@ -18,6 +18,7 @@ from .impact import write_impact_report
 from .import_evidence import import_live_evidence
 from .judge_pack import create_judge_pack
 from .live_unblock import write_live_unblock_summary
+from .live_playbook import write_live_playbook
 from .metrics import append_run_metrics
 from .next_actions import write_next_actions
 from .orchestration import run_deterministic_workflow, write_workflow_log
@@ -242,6 +243,10 @@ def build_parser() -> argparse.ArgumentParser:
     audit_cmd = sub.add_parser("plan-audit", help="Audit current state against implementation phases.")
     audit_cmd.add_argument("--root", default=".", help="Project root path.")
     audit_cmd.add_argument("--output-file", default="output/report/plan_audit.json", help="Output JSON file.")
+
+    playbook_cmd = sub.add_parser("live-playbook", help="Generate step-by-step live unblocking playbook.")
+    playbook_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
+    playbook_cmd.add_argument("--output-file", default="output/report/live_playbook.md", help="Output markdown file.")
     return parser
 
 
@@ -778,6 +783,13 @@ def cmd_plan_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_live_playbook(args: argparse.Namespace) -> int:
+    payload = write_live_playbook(Path(args.report_dir), Path(args.output_file))
+    print(json.dumps(payload, indent=2))
+    print(f"Wrote: {args.output_file}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -832,6 +844,8 @@ def main() -> int:
             return cmd_handoff_note(args)
         if args.command == "plan-audit":
             return cmd_plan_audit(args)
+        if args.command == "live-playbook":
+            return cmd_live_playbook(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
