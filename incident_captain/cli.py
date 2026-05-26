@@ -9,6 +9,7 @@ from .briefing import compose_brief, run_incident_queries
 from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
 from .metrics import append_run_metrics
+from .reporting import write_demo_report
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,6 +63,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         default="output/catalog",
         help="Directory for catalog snapshots.",
+    )
+
+    report = sub.add_parser("demo-report", help="Generate judge-ready report from run metrics.")
+    report.add_argument(
+        "--metrics-log",
+        default="output/run_metrics.jsonl",
+        help="Path to JSONL metrics log.",
+    )
+    report.add_argument(
+        "--output-dir",
+        default="output/report",
+        help="Directory for generated report files.",
     )
     return parser
 
@@ -151,6 +164,17 @@ def cmd_snapshot_catalog(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_demo_report(args: argparse.Namespace) -> int:
+    out_dir = Path(args.output_dir)
+    out_json = out_dir / "demo_report.json"
+    out_md = out_dir / "demo_report.md"
+    summary = write_demo_report(Path(args.metrics_log), out_json, out_md)
+    print(json.dumps(summary, indent=2))
+    print(f"Wrote: {out_json}")
+    print(f"Wrote: {out_md}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -161,6 +185,8 @@ def main() -> int:
             return cmd_health(args)
         if args.command == "snapshot-catalog":
             return cmd_snapshot_catalog(args)
+        if args.command == "demo-report":
+            return cmd_demo_report(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:

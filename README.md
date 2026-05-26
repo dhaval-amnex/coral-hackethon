@@ -61,6 +61,11 @@ Catalog snapshot (when Coral access is available):
 python -m incident_captain.cli snapshot-catalog --output-dir output/catalog
 ```
 
+Generate demo report from run metrics:
+```bash
+python -m incident_captain.cli demo-report --metrics-log output/run_metrics.jsonl --output-dir output/report
+```
+
 Outputs:
 - `output/INC-1234.json`
 - `output/INC-1234.md`
