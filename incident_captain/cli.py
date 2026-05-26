@@ -8,6 +8,7 @@ from .batch import write_batch_summary
 from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
+from .external_kit import write_external_kit
 from .finalize import write_final_summary
 from .impact import write_impact_report
 from .import_evidence import import_live_evidence
@@ -188,6 +189,9 @@ def build_parser() -> argparse.ArgumentParser:
     import_cmd.add_argument("--filters-file", required=True, help="Path to catalog_filters.json from live environment.")
     import_cmd.add_argument("--live-metrics-file", required=True, help="Path to live run_metrics.jsonl.")
     import_cmd.add_argument("--output-root", default="output", help="Project output root directory.")
+
+    kit_cmd = sub.add_parser("external-kit", help="Generate a handoff kit for collecting live evidence externally.")
+    kit_cmd.add_argument("--output-dir", default="output/external_kit", help="Directory for generated kit files.")
     return parser
 
 
@@ -579,6 +583,12 @@ def cmd_import_live_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_external_kit(args: argparse.Namespace) -> int:
+    result = write_external_kit(Path(args.output_dir))
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -615,6 +625,8 @@ def main() -> int:
             return cmd_next_actions(args)
         if args.command == "import-live-evidence":
             return cmd_import_live_evidence(args)
+        if args.command == "external-kit":
+            return cmd_external_kit(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:

@@ -116,6 +116,11 @@ Import live evidence from unrestricted machine:
 python -m incident_captain.cli import-live-evidence --tables-file <path\\catalog_tables.json> --columns-file <path\\catalog_columns.json> --filters-file <path\\catalog_filters.json> --live-metrics-file <path\\run_metrics_live.jsonl> --output-root output
 ```
 
+Generate external evidence collection kit:
+```bash
+python -m incident_captain.cli external-kit --output-dir output/external_kit
+```
+
 One-command full demo pipeline:
 ```bash
 python -m incident_captain.cli demo-run --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
