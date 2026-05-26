@@ -8,6 +8,7 @@ from .batch import write_batch_summary
 from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
+from .finalize import write_final_summary
 from .impact import write_impact_report
 from .metrics import append_run_metrics
 from .orchestration import run_deterministic_workflow, write_workflow_log
@@ -156,6 +157,21 @@ def build_parser() -> argparse.ArgumentParser:
     release = sub.add_parser("release-check", help="Generate final go/no-go release decision report.")
     release.add_argument("--root", default=".", help="Project root path.")
     release.add_argument("--output-dir", default="output/report", help="Directory for release report output.")
+
+    finalize = sub.add_parser("finalize", help="Run full finalization pipeline and emit final summary.")
+    finalize.add_argument("--incident-id", required=True, help="Incident identifier.")
+    finalize.add_argument("--root", default=".", help="Project root path.")
+    finalize.add_argument("--output-dir", default="output", help="Primary output directory.")
+    finalize.add_argument("--report-dir", default="output/report", help="Report output directory.")
+    finalize.add_argument("--bundle-root", default="output/bundles", help="Bundle destination root.")
+    finalize.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Metrics log path.")
+    finalize.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
+    finalize.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+    finalize.add_argument("--mock-data-dir", default="", help="Optional mock data directory.")
+    finalize.add_argument("--sql-dir", default="deliverables/sql", help="SQL templates directory.")
+    finalize.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
+    finalize.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
+    finalize.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
     return parser
 
 
@@ -455,6 +471,75 @@ def cmd_release_check(args: argparse.Namespace) -> int:
     return 0 if report["go_for_submission"] else 1
 
 
+def cmd_finalize(args: argparse.Namespace) -> int:
+    class Obj:
+        pass
+
+    demo_args = Obj()
+    demo_args.command = "demo-run"
+    demo_args.incident_id = args.incident_id
+    demo_args.output_dir = args.output_dir
+    demo_args.report_dir = args.report_dir
+    demo_args.bundle_root = args.bundle_root
+    demo_args.metrics_log = args.metrics_log
+    demo_args.workflow_log = args.workflow_log
+    demo_args.baseline_file = args.baseline_file
+    demo_args.mock_data_dir = args.mock_data_dir
+    demo_args.sql_dir = args.sql_dir
+    demo_args.coral_bin = args.coral_bin
+    demo_args.min_success_rate = args.min_success_rate
+    demo_args.min_improvement_percent = args.min_improvement_percent
+    rc = cmd_demo_run(demo_args)
+    if rc != 0:
+        return rc
+
+    score_args = Obj()
+    score_args.command = "scorecard"
+    score_args.report_dir = args.report_dir
+    score_args.quality_gate_file = str(Path(args.report_dir) / "quality_gate.json")
+    score_args.output_dir = args.report_dir
+    rc = cmd_scorecard(score_args)
+    if rc != 0:
+        return rc
+
+    prog_args = Obj()
+    prog_args.command = "progress-report"
+    prog_args.root = args.root
+    prog_args.output_dir = args.report_dir
+    rc = cmd_progress_report(prog_args)
+    if rc != 0:
+        return rc
+
+    ready_args = Obj()
+    ready_args.command = "live-readiness"
+    ready_args.root = args.root
+    ready_args.output_dir = args.report_dir
+    _ = cmd_live_readiness(ready_args)  # non-blocking for offline mode
+
+    release_args = Obj()
+    release_args.command = "release-check"
+    release_args.root = args.root
+    release_args.output_dir = args.report_dir
+    rc_release = cmd_release_check(release_args)
+
+    final_summary = {
+        "incident_id": args.incident_id,
+        "artifacts": {
+            "brief_json": str(Path(args.output_dir) / f"{args.incident_id}.json"),
+            "brief_md": str(Path(args.output_dir) / f"{args.incident_id}.md"),
+            "report_dir": str(Path(args.report_dir)),
+            "bundle_root": str(Path(args.bundle_root)),
+        },
+        "release_check_exit_code": rc_release,
+        "note": "release_check_exit_code may be non-zero in offline-only environments due to live-readiness blockers.",
+    }
+    out = Path(args.report_dir) / "final_summary.json"
+    write_final_summary(out, final_summary)
+    print(json.dumps(final_summary, indent=2))
+    print(f"Wrote: {out}")
+    return 0 if rc_release == 0 else 1
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -485,6 +570,8 @@ def main() -> int:
             return cmd_live_readiness(args)
         if args.command == "release-check":
             return cmd_release_check(args)
+        if args.command == "finalize":
+            return cmd_finalize(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
