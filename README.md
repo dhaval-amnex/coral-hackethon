@@ -126,6 +126,11 @@ Run post-import live unblock checks:
 python -m incident_captain.cli live-unblock --root . --report-dir output/report
 ```
 
+Run end-to-end live close loop:
+```bash
+python -m incident_captain.cli close-live-loop --incident-id INC-1001 --tables-file <path\\catalog_tables.json> --columns-file <path\\catalog_columns.json> --filters-file <path\\catalog_filters.json> --live-metrics-file <path\\run_metrics_live.jsonl> --output-root output --report-dir output/report --bundle-root output/bundles --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
+```
+
 Run environment diagnostics:
 ```bash
 python -m incident_captain.cli doctor --root .

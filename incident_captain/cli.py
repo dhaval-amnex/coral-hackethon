@@ -203,6 +203,18 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_cmd = sub.add_parser("doctor", help="Run local environment diagnostics.")
     doctor_cmd.add_argument("--root", default=".", help="Project root path.")
 
+    close_cmd = sub.add_parser("close-live-loop", help="Import live evidence and run live-unblock + finalize flow.")
+    close_cmd.add_argument("--incident-id", required=True, help="Incident identifier.")
+    close_cmd.add_argument("--tables-file", required=True, help="Path to catalog_tables.json from live environment.")
+    close_cmd.add_argument("--columns-file", required=True, help="Path to catalog_columns.json from live environment.")
+    close_cmd.add_argument("--filters-file", required=True, help="Path to catalog_filters.json from live environment.")
+    close_cmd.add_argument("--live-metrics-file", required=True, help="Path to live run_metrics.jsonl.")
+    close_cmd.add_argument("--output-root", default="output", help="Project output root directory.")
+    close_cmd.add_argument("--report-dir", default="output/report", help="Directory for report artifacts.")
+    close_cmd.add_argument("--bundle-root", default="output/bundles", help="Bundle destination root.")
+    close_cmd.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
+    close_cmd.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+
     dash_cmd = sub.add_parser("status-dashboard", help="Generate one-page status dashboard from reports.")
     dash_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
     dash_cmd.add_argument("--output-file", default="output/report/status_dashboard.md", help="Output markdown file.")
@@ -644,6 +656,42 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_close_live_loop(args: argparse.Namespace) -> int:
+    class Obj:
+        pass
+
+    import_args = Obj()
+    import_args.tables_file = args.tables_file
+    import_args.columns_file = args.columns_file
+    import_args.filters_file = args.filters_file
+    import_args.live_metrics_file = args.live_metrics_file
+    import_args.output_root = args.output_root
+    rc = cmd_import_live_evidence(import_args)
+    if rc != 0:
+        return rc
+
+    unblock_args = Obj()
+    unblock_args.root = "."
+    unblock_args.report_dir = args.report_dir
+    _ = cmd_live_unblock(unblock_args)
+
+    finalize_args = Obj()
+    finalize_args.incident_id = args.incident_id
+    finalize_args.root = "."
+    finalize_args.output_dir = args.output_root
+    finalize_args.report_dir = args.report_dir
+    finalize_args.bundle_root = args.bundle_root
+    finalize_args.metrics_log = str(Path(args.output_root) / "run_metrics.jsonl")
+    finalize_args.workflow_log = args.workflow_log
+    finalize_args.baseline_file = args.baseline_file
+    finalize_args.mock_data_dir = ""
+    finalize_args.sql_dir = "deliverables/sql"
+    finalize_args.coral_bin = "coral"
+    finalize_args.min_success_rate = 0.7
+    finalize_args.min_improvement_percent = 10.0
+    return cmd_finalize(finalize_args)
+
+
 def cmd_status_dashboard(args: argparse.Namespace) -> int:
     payload = write_dashboard(Path(args.report_dir), Path(args.output_file))
     print(json.dumps({"written": args.output_file, "has_reports": {k: bool(v) for k, v in payload.items()}}, indent=2))
@@ -692,6 +740,8 @@ def main() -> int:
             return cmd_live_unblock(args)
         if args.command == "doctor":
             return cmd_doctor(args)
+        if args.command == "close-live-loop":
+            return cmd_close_live_loop(args)
         if args.command == "status-dashboard":
             return cmd_status_dashboard(args)
         parser.error("unknown command")
