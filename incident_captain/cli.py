@@ -14,6 +14,7 @@ from .orchestration import run_deterministic_workflow, write_workflow_log
 from .progress import write_progress_report
 from .quality import run_quality_gate
 from .readiness import write_live_readiness_report
+from .release import write_release_check
 from .reporting import write_demo_report
 from .scorecard import write_scorecard
 
@@ -151,6 +152,10 @@ def build_parser() -> argparse.ArgumentParser:
     readiness = sub.add_parser("live-readiness", help="Check readiness for real-data submission.")
     readiness.add_argument("--root", default=".", help="Project root path.")
     readiness.add_argument("--output-dir", default="output/report", help="Directory for readiness report output.")
+
+    release = sub.add_parser("release-check", help="Generate final go/no-go release decision report.")
+    release.add_argument("--root", default=".", help="Project root path.")
+    release.add_argument("--output-dir", default="output/report", help="Directory for release report output.")
     return parser
 
 
@@ -439,6 +444,17 @@ def cmd_live_readiness(args: argparse.Namespace) -> int:
     return 0 if report["ready_for_live_submission"] else 1
 
 
+def cmd_release_check(args: argparse.Namespace) -> int:
+    out_dir = Path(args.output_dir)
+    out_json = out_dir / "release_check.json"
+    out_md = out_dir / "release_check.md"
+    report = write_release_check(Path(args.root), out_json, out_md)
+    print(json.dumps(report, indent=2))
+    print(f"Wrote: {out_json}")
+    print(f"Wrote: {out_md}")
+    return 0 if report["go_for_submission"] else 1
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -467,6 +483,8 @@ def main() -> int:
             return cmd_progress_report(args)
         if args.command == "live-readiness":
             return cmd_live_readiness(args)
+        if args.command == "release-check":
+            return cmd_release_check(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
