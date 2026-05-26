@@ -12,6 +12,7 @@ from .external_kit import write_external_kit
 from .finalize import write_final_summary
 from .impact import write_impact_report
 from .import_evidence import import_live_evidence
+from .live_unblock import write_live_unblock_summary
 from .metrics import append_run_metrics
 from .next_actions import write_next_actions
 from .orchestration import run_deterministic_workflow, write_workflow_log
@@ -192,6 +193,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     kit_cmd = sub.add_parser("external-kit", help="Generate a handoff kit for collecting live evidence externally.")
     kit_cmd.add_argument("--output-dir", default="output/external_kit", help="Directory for generated kit files.")
+
+    unblock_cmd = sub.add_parser("live-unblock", help="Run unblock checks after importing live evidence.")
+    unblock_cmd.add_argument("--root", default=".", help="Project root path.")
+    unblock_cmd.add_argument("--report-dir", default="output/report", help="Directory for report artifacts.")
     return parser
 
 
@@ -589,6 +594,41 @@ def cmd_external_kit(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_live_unblock(args: argparse.Namespace) -> int:
+    class Obj:
+        pass
+
+    ready_args = Obj()
+    ready_args.root = args.root
+    ready_args.output_dir = args.report_dir
+    _ = cmd_live_readiness(ready_args)
+
+    release_args = Obj()
+    release_args.root = args.root
+    release_args.output_dir = args.report_dir
+    _ = cmd_release_check(release_args)
+
+    next_args = Obj()
+    next_args.report_dir = args.report_dir
+    next_args.output_dir = args.report_dir
+    _ = cmd_next_actions(next_args)
+
+    live_readiness = json.loads((Path(args.report_dir) / "live_readiness.json").read_text(encoding="utf-8"))
+    release_check = json.loads((Path(args.report_dir) / "release_check.json").read_text(encoding="utf-8"))
+    next_actions = json.loads((Path(args.report_dir) / "next_actions.json").read_text(encoding="utf-8"))
+
+    summary = {
+        "live_ready": live_readiness.get("ready_for_live_submission", False),
+        "go_for_live_submission": release_check.get("go_for_live_submission", False),
+        "pending_actions": next_actions.get("actions", []),
+    }
+    out = Path(args.report_dir) / "live_unblock_summary.json"
+    write_live_unblock_summary(out, summary)
+    print(json.dumps(summary, indent=2))
+    print(f"Wrote: {out}")
+    return 0 if summary["go_for_live_submission"] else 1
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -627,6 +667,8 @@ def main() -> int:
             return cmd_import_live_evidence(args)
         if args.command == "external-kit":
             return cmd_external_kit(args)
+        if args.command == "live-unblock":
+            return cmd_live_unblock(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
