@@ -10,6 +10,7 @@ from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
 from .finalize import write_final_summary
 from .impact import write_impact_report
+from .import_evidence import import_live_evidence
 from .metrics import append_run_metrics
 from .next_actions import write_next_actions
 from .orchestration import run_deterministic_workflow, write_workflow_log
@@ -177,6 +178,16 @@ def build_parser() -> argparse.ArgumentParser:
     next_cmd = sub.add_parser("next-actions", help="Generate prioritized pending actions from report artifacts.")
     next_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
     next_cmd.add_argument("--output-dir", default="output/report", help="Directory for next-actions output.")
+
+    import_cmd = sub.add_parser(
+        "import-live-evidence",
+        help="Import live catalog snapshots and live run metrics from another machine.",
+    )
+    import_cmd.add_argument("--tables-file", required=True, help="Path to catalog_tables.json from live environment.")
+    import_cmd.add_argument("--columns-file", required=True, help="Path to catalog_columns.json from live environment.")
+    import_cmd.add_argument("--filters-file", required=True, help="Path to catalog_filters.json from live environment.")
+    import_cmd.add_argument("--live-metrics-file", required=True, help="Path to live run_metrics.jsonl.")
+    import_cmd.add_argument("--output-root", default="output", help="Project output root directory.")
     return parser
 
 
@@ -556,6 +567,18 @@ def cmd_next_actions(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_import_live_evidence(args: argparse.Namespace) -> int:
+    result = import_live_evidence(
+        tables_file=Path(args.tables_file),
+        columns_file=Path(args.columns_file),
+        filters_file=Path(args.filters_file),
+        live_metrics_file=Path(args.live_metrics_file),
+        output_root=Path(args.output_root),
+    )
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -590,6 +613,8 @@ def main() -> int:
             return cmd_finalize(args)
         if args.command == "next-actions":
             return cmd_next_actions(args)
+        if args.command == "import-live-evidence":
+            return cmd_import_live_evidence(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
