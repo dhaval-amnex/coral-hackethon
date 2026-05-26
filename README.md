@@ -86,6 +86,11 @@ Run final quality gate:
 python -m incident_captain.cli quality-gate --incident-id INC-1001 --output-dir output --report-dir output/report --min-success-rate 0.7 --min-improvement-percent 10
 ```
 
+One-command full demo pipeline:
+```bash
+python -m incident_captain.cli demo-run --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
+```
+
 Outputs:
 - `output/INC-1234.json`
 - `output/INC-1234.md`

@@ -106,6 +106,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=10.0,
         help="Minimum time-saved improvement percent.",
     )
+
+    demo = sub.add_parser("demo-run", help="Run full demo pipeline end-to-end.")
+    demo.add_argument("--incident-id", required=True, help="Incident identifier.")
+    demo.add_argument("--output-dir", default="output", help="Primary output directory.")
+    demo.add_argument("--report-dir", default="output/report", help="Report output directory.")
+    demo.add_argument("--bundle-root", default="output/bundles", help="Bundle destination root.")
+    demo.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Metrics log path.")
+    demo.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
+    demo.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+    demo.add_argument("--mock-data-dir", default="", help="Optional mock data directory.")
+    demo.add_argument("--sql-dir", default="deliverables/sql", help="SQL templates directory.")
+    demo.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
+    demo.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
+    demo.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
     return parser
 
 
@@ -250,6 +264,62 @@ def cmd_quality_gate(args: argparse.Namespace) -> int:
     return 0 if result["passed"] else 1
 
 
+def cmd_demo_run(args: argparse.Namespace) -> int:
+    class Obj:
+        pass
+
+    analyze_args = Obj()
+    analyze_args.coral_bin = args.coral_bin
+    analyze_args.sql_dir = args.sql_dir
+    analyze_args.mock_data_dir = args.mock_data_dir
+    analyze_args.command = "analyze"
+    analyze_args.incident_id = args.incident_id
+    analyze_args.output_dir = args.output_dir
+    analyze_args.view = "executive"
+    analyze_args.metrics_log = args.metrics_log
+    analyze_args.workflow_log = args.workflow_log
+    rc = cmd_analyze(analyze_args)
+    if rc != 0:
+        return rc
+
+    report_args = Obj()
+    report_args.command = "demo-report"
+    report_args.metrics_log = args.metrics_log
+    report_args.output_dir = args.report_dir
+    rc = cmd_demo_report(report_args)
+    if rc != 0:
+        return rc
+
+    impact_args = Obj()
+    impact_args.command = "impact-report"
+    impact_args.baseline_file = args.baseline_file
+    impact_args.metrics_log = args.metrics_log
+    impact_args.output_dir = args.report_dir
+    rc = cmd_impact_report(impact_args)
+    if rc != 0:
+        return rc
+
+    quality_args = Obj()
+    quality_args.command = "quality-gate"
+    quality_args.incident_id = args.incident_id
+    quality_args.output_dir = args.output_dir
+    quality_args.report_dir = args.report_dir
+    quality_args.min_success_rate = args.min_success_rate
+    quality_args.min_improvement_percent = args.min_improvement_percent
+    rc = cmd_quality_gate(quality_args)
+    if rc != 0:
+        return rc
+
+    bundle_args = Obj()
+    bundle_args.command = "submission-bundle"
+    bundle_args.incident_id = args.incident_id
+    bundle_args.output_dir = args.output_dir
+    bundle_args.report_dir = args.report_dir
+    bundle_args.bundle_root = args.bundle_root
+    rc = cmd_submission_bundle(bundle_args)
+    return rc
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -268,6 +338,8 @@ def main() -> int:
             return cmd_impact_report(args)
         if args.command == "quality-gate":
             return cmd_quality_gate(args)
+        if args.command == "demo-run":
+            return cmd_demo_run(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
