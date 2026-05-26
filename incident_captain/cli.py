@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .batch import write_batch_summary
 from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
 from .exporters import write_json, write_markdown
@@ -120,6 +121,16 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
     demo.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     demo.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+
+    batch = sub.add_parser("batch-run", help="Run demo pipeline across multiple incidents.")
+    batch.add_argument("--incident-ids", required=True, help="Comma-separated incident IDs.")
+    batch.add_argument("--output-root", default="output/batch", help="Root output directory for batch runs.")
+    batch.add_argument("--mock-data-dir", default="", help="Optional mock data directory.")
+    batch.add_argument("--sql-dir", default="deliverables/sql", help="SQL templates directory.")
+    batch.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
+    batch.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+    batch.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
+    batch.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
     return parser
 
 
@@ -320,6 +331,52 @@ def cmd_demo_run(args: argparse.Namespace) -> int:
     return rc
 
 
+def cmd_batch_run(args: argparse.Namespace) -> int:
+    class Obj:
+        pass
+
+    incident_ids = [x.strip() for x in args.incident_ids.split(",") if x.strip()]
+    output_root = Path(args.output_root)
+    rows = []
+    for incident_id in incident_ids:
+        incident_root = output_root / incident_id
+        out_dir = incident_root / "output"
+        report_dir = out_dir / "report"
+        bundle_root = out_dir / "bundles"
+        metrics_log = out_dir / "run_metrics.jsonl"
+        workflow_log = out_dir / "workflow_log.json"
+
+        demo_args = Obj()
+        demo_args.command = "demo-run"
+        demo_args.incident_id = incident_id
+        demo_args.output_dir = str(out_dir)
+        demo_args.report_dir = str(report_dir)
+        demo_args.bundle_root = str(bundle_root)
+        demo_args.metrics_log = str(metrics_log)
+        demo_args.workflow_log = str(workflow_log)
+        demo_args.baseline_file = args.baseline_file
+        demo_args.mock_data_dir = args.mock_data_dir
+        demo_args.sql_dir = args.sql_dir
+        demo_args.coral_bin = args.coral_bin
+        demo_args.min_success_rate = args.min_success_rate
+        demo_args.min_improvement_percent = args.min_improvement_percent
+        rc = cmd_demo_run(demo_args)
+        rows.append(
+            {
+                "incident_id": incident_id,
+                "status": "passed" if rc == 0 else "failed",
+                "exit_code": rc,
+                "output_dir": str(out_dir),
+            }
+        )
+
+    summary_path = output_root / "batch_summary.json"
+    summary = write_batch_summary(summary_path, rows)
+    print(json.dumps(summary, indent=2))
+    print(f"Wrote: {summary_path}")
+    return 0 if summary["failed"] == 0 else 1
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -340,6 +397,8 @@ def main() -> int:
             return cmd_quality_gate(args)
         if args.command == "demo-run":
             return cmd_demo_run(args)
+        if args.command == "batch-run":
+            return cmd_batch_run(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
