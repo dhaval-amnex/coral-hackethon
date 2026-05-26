@@ -24,6 +24,7 @@ def run_deterministic_workflow(
     incident_id: str,
     sql_dir: Path,
     mock_data_dir: Path | None = None,
+    extra_vars: dict[str, str] | None = None,
 ) -> WorkflowResult:
     started = time.perf_counter()
     workflow_log: list[dict[str, Any]] = []
@@ -47,6 +48,7 @@ def run_deterministic_workflow(
         sql_dir=sql_dir,
         incident_id=incident_id,
         mock_data_dir=mock_data_dir,
+        extra_vars=extra_vars,
     )
     workflow_log.append(
         {

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .batch import write_batch_summary
 from .bundling import create_submission_bundle
-from .coral import CoralClient, CoralError
+from .coral import CoralClient, CoralError, find_coral_bin, load_env_file
 from .dashboard import write_dashboard
 from .doctor import build_doctor_report
 from .evidence_verify import verify_evidence
@@ -36,21 +36,28 @@ def build_parser() -> argparse.ArgumentParser:
         prog="incident-captain",
         description="Coral-powered enterprise incident investigation CLI.",
     )
-    parser.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
-    parser.add_argument(
+
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--coral-bin", default=find_coral_bin(), help="Path to coral executable.")
+    common.add_argument(
         "--sql-dir",
         default="deliverables/sql",
         help="Directory containing SQL templates.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--mock-data-dir",
         default="",
         help="Optional directory containing mock JSON files per query name.",
     )
+    common.add_argument(
+        "--env-file",
+        default=".env",
+        help="Path to .env file with API credentials (loaded before live queries).",
+    )
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    analyze = sub.add_parser("analyze", help="Run incident analysis workflow.")
+    analyze = sub.add_parser("analyze", parents=[common], help="Run incident analysis workflow.")
     analyze.add_argument("--incident-id", required=True, help="Incident identifier.")
     analyze.add_argument(
         "--output-dir",
@@ -73,8 +80,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="output/workflow_log.json",
         help="Path to workflow step log JSON.",
     )
+    analyze.add_argument("--github-owner", default="", help="GitHub org/user for deploy correlation.")
+    analyze.add_argument("--github-repo", default="", help="GitHub repo name for deploy correlation.")
 
-    health = sub.add_parser("health", help="Run source health checks.")
+    health = sub.add_parser("health", parents=[common], help="Run source health checks.")
     health.add_argument(
         "--sources",
         nargs="+",
@@ -82,7 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Source names to test.",
     )
 
-    snapshot = sub.add_parser("snapshot-catalog", help="Export Coral catalog metadata to JSON.")
+    snapshot = sub.add_parser("snapshot-catalog", parents=[common], help="Export Coral catalog metadata to JSON.")
     snapshot.add_argument(
         "--output-dir",
         default="output/catalog",
@@ -124,7 +133,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Minimum time-saved improvement percent.",
     )
 
-    demo = sub.add_parser("demo-run", help="Run full demo pipeline end-to-end.")
+    demo = sub.add_parser("demo-run", parents=[common], help="Run full demo pipeline end-to-end.")
     demo.add_argument("--incident-id", required=True, help="Incident identifier.")
     demo.add_argument("--output-dir", default="output", help="Primary output directory.")
     demo.add_argument("--report-dir", default="output/report", help="Report output directory.")
@@ -132,18 +141,14 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Metrics log path.")
     demo.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
     demo.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
-    demo.add_argument("--mock-data-dir", default="", help="Optional mock data directory.")
-    demo.add_argument("--sql-dir", default="deliverables/sql", help="SQL templates directory.")
-    demo.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
     demo.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     demo.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+    demo.add_argument("--github-owner", default="", help="GitHub org/user for deploy correlation.")
+    demo.add_argument("--github-repo", default="", help="GitHub repo name for deploy correlation.")
 
-    batch = sub.add_parser("batch-run", help="Run demo pipeline across multiple incidents.")
+    batch = sub.add_parser("batch-run", parents=[common], help="Run demo pipeline across multiple incidents.")
     batch.add_argument("--incident-ids", required=True, help="Comma-separated incident IDs.")
     batch.add_argument("--output-root", default="output/batch", help="Root output directory for batch runs.")
-    batch.add_argument("--mock-data-dir", default="", help="Optional mock data directory.")
-    batch.add_argument("--sql-dir", default="deliverables/sql", help="SQL templates directory.")
-    batch.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
     batch.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
     batch.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     batch.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
@@ -169,7 +174,7 @@ def build_parser() -> argparse.ArgumentParser:
     release.add_argument("--root", default=".", help="Project root path.")
     release.add_argument("--output-dir", default="output/report", help="Directory for release report output.")
 
-    finalize = sub.add_parser("finalize", help="Run full finalization pipeline and emit final summary.")
+    finalize = sub.add_parser("finalize", parents=[common], help="Run full finalization pipeline and emit final summary.")
     finalize.add_argument("--incident-id", required=True, help="Incident identifier.")
     finalize.add_argument("--root", default=".", help="Project root path.")
     finalize.add_argument("--output-dir", default="output", help="Primary output directory.")
@@ -178,9 +183,6 @@ def build_parser() -> argparse.ArgumentParser:
     finalize.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Metrics log path.")
     finalize.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
     finalize.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
-    finalize.add_argument("--mock-data-dir", default="", help="Optional mock data directory.")
-    finalize.add_argument("--sql-dir", default="deliverables/sql", help="SQL templates directory.")
-    finalize.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
     finalize.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     finalize.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
 
@@ -247,21 +249,53 @@ def build_parser() -> argparse.ArgumentParser:
     playbook_cmd = sub.add_parser("live-playbook", help="Generate step-by-step live unblocking playbook.")
     playbook_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
     playbook_cmd.add_argument("--output-file", default="output/report/live_playbook.md", help="Output markdown file.")
+
+    setup_cmd = sub.add_parser("setup-sources", parents=[common], help="Configure Coral data sources from credentials.")
+    setup_cmd.add_argument(
+        "--sources",
+        nargs="+",
+        default=["pagerduty", "github", "slack", "datadog"],
+        help="Source names to configure.",
+    )
+    setup_cmd.add_argument(
+        "--skip-test",
+        action="store_true",
+        help="Skip connectivity test after adding sources.",
+    )
+
+    snapshot_live = sub.add_parser("snapshot-schema", parents=[common], help="Snapshot live Coral schema to output/catalog.")
+    snapshot_live.add_argument("--output-dir", default="output/catalog", help="Directory for catalog snapshots.")
+
     return parser
 
 
+def _load_env(args: argparse.Namespace) -> None:
+    env_file = getattr(args, "env_file", ".env")
+    if env_file:
+        load_env_file(Path(env_file))
+
+
 def cmd_analyze(args: argparse.Namespace) -> int:
+    if not getattr(args, "mock_data_dir", ""):
+        _load_env(args)
     coral = CoralClient(coral_bin=args.coral_bin)
     sql_dir = Path(args.sql_dir)
     mock_data_dir = Path(args.mock_data_dir) if args.mock_data_dir else None
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    extra_vars: dict[str, str] = {}
+    if getattr(args, "github_owner", ""):
+        extra_vars["GITHUB_OWNER"] = args.github_owner
+    if getattr(args, "github_repo", ""):
+        extra_vars["GITHUB_REPO"] = args.github_repo
+
     workflow = run_deterministic_workflow(
         coral=coral,
         incident_id=args.incident_id,
         sql_dir=sql_dir,
         mock_data_dir=mock_data_dir,
+        extra_vars=extra_vars or None,
     )
     brief = workflow.brief
 
@@ -296,6 +330,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
 
 
 def cmd_health(args: argparse.Namespace) -> int:
+    if not args.mock_data_dir:
+        _load_env(args)
     if args.mock_data_dir:
         mock_data_dir = Path(args.mock_data_dir)
         required = [
@@ -318,13 +354,14 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 
 def cmd_snapshot_catalog(args: argparse.Namespace) -> int:
+    _load_env(args)
     coral = CoralClient(coral_bin=args.coral_bin)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     tables_sql = "SELECT schema_name, table_name FROM coral.tables ORDER BY 1,2"
     columns_sql = "SELECT schema_name, table_name, column_name, data_type FROM coral.columns ORDER BY 1,2,3"
-    filters_sql = "SELECT schema_name, table_name, filter_name, required FROM coral.filters ORDER BY 1,2,3"
+    filters_sql = "SELECT schema_name, table_name, filter_name, is_required FROM coral.filters ORDER BY 1,2,3"
 
     tables, _ = coral.run_sql(tables_sql)
     columns, _ = coral.run_sql(columns_sql)
@@ -403,12 +440,15 @@ def cmd_demo_run(args: argparse.Namespace) -> int:
     analyze_args.coral_bin = args.coral_bin
     analyze_args.sql_dir = args.sql_dir
     analyze_args.mock_data_dir = args.mock_data_dir
+    analyze_args.env_file = getattr(args, "env_file", ".env")
     analyze_args.command = "analyze"
     analyze_args.incident_id = args.incident_id
     analyze_args.output_dir = args.output_dir
     analyze_args.view = "executive"
     analyze_args.metrics_log = args.metrics_log
     analyze_args.workflow_log = args.workflow_log
+    analyze_args.github_owner = getattr(args, "github_owner", "")
+    analyze_args.github_repo = getattr(args, "github_repo", "")
     rc = cmd_analyze(analyze_args)
     if rc != 0:
         return rc
@@ -790,6 +830,57 @@ def cmd_live_playbook(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_setup_sources(args: argparse.Namespace) -> int:
+    _load_env(args)
+    coral = CoralClient(coral_bin=args.coral_bin)
+    results: dict[str, str] = {}
+    for source in args.sources:
+        ok, msg = coral.setup_source(source)
+        results[source] = "added" if ok else f"failed: {msg}"
+        status = "ok" if ok else "FAILED"
+        print(f"  [{status}] {source}: {msg}")
+
+    if not args.skip_test:
+        print("\nTesting source connectivity...")
+        try:
+            health = coral.source_health(args.sources)
+        except CoralError as exc:
+            print(f"Health check error: {exc}")
+            health = {}
+        for src, state in health.items():
+            print(f"  [{state.upper()}] {src}")
+    else:
+        health = {}
+
+    summary = {"setup": results, "health": health}
+    print(json.dumps(summary, indent=2))
+    return 0 if all(v == "added" for v in results.values()) else 1
+
+
+def cmd_snapshot_schema(args: argparse.Namespace) -> int:
+    _load_env(args)
+    coral = CoralClient(coral_bin=args.coral_bin)
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    tables_sql = "SELECT schema_name, table_name FROM coral.tables ORDER BY 1,2"
+    columns_sql = "SELECT schema_name, table_name, column_name, data_type FROM coral.columns ORDER BY 1,2,3"
+    filters_sql = "SELECT schema_name, table_name, filter_name, is_required FROM coral.filters ORDER BY 1,2,3"
+
+    tables, _ = coral.run_sql(tables_sql)
+    columns, _ = coral.run_sql(columns_sql)
+    filters, _ = coral.run_sql(filters_sql)
+
+    (out_dir / "catalog_tables.json").write_text(json.dumps(tables, indent=2), encoding="utf-8")
+    (out_dir / "catalog_columns.json").write_text(json.dumps(columns, indent=2), encoding="utf-8")
+    (out_dir / "catalog_filters.json").write_text(json.dumps(filters, indent=2), encoding="utf-8")
+
+    print(f"Wrote: {out_dir / 'catalog_tables.json'} ({len(tables)} tables)")
+    print(f"Wrote: {out_dir / 'catalog_columns.json'} ({len(columns)} columns)")
+    print(f"Wrote: {out_dir / 'catalog_filters.json'} ({len(filters)} filters)")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -846,6 +937,10 @@ def main() -> int:
             return cmd_plan_audit(args)
         if args.command == "live-playbook":
             return cmd_live_playbook(args)
+        if args.command == "setup-sources":
+            return cmd_setup_sources(args)
+        if args.command == "snapshot-schema":
+            return cmd_snapshot_schema(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:

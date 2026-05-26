@@ -16,10 +16,20 @@ QUERY_FILES = [
     ("final_dataset", "05_final_incident_brief_dataset.sql"),
 ]
 
+# Vars that must be non-empty for a query to run (otherwise it is skipped gracefully).
+QUERY_REQUIRED_VARS: dict[str, list[str]] = {
+    "deploy_correlation": ["GITHUB_OWNER", "GITHUB_REPO"],
+}
+
 
 def run_incident_queries(
-    coral: CoralClient, sql_dir: Path, incident_id: str, mock_data_dir: Path | None = None
+    coral: CoralClient,
+    sql_dir: Path,
+    incident_id: str,
+    mock_data_dir: Path | None = None,
+    extra_vars: dict[str, str] | None = None,
 ) -> tuple[list[QueryRun], list[str]]:
+    template_vars: dict[str, str] = {"INCIDENT_ID": incident_id, **(extra_vars or {})}
     runs: list[QueryRun] = []
     errors: list[str] = []
     for name, file_name in QUERY_FILES:
@@ -38,11 +48,18 @@ def run_incident_queries(
                 errors.append(f"invalid mock JSON {mock_file}: {exc}")
             continue
 
+        # Skip queries whose required vars are missing or empty.
+        required = QUERY_REQUIRED_VARS.get(name, [])
+        missing = [v for v in required if not template_vars.get(v)]
+        if missing:
+            errors.append(f"{name}: skipped — set --github-owner / --github-repo to enable deploy correlation")
+            continue
+
         path = sql_dir / file_name
         if not path.exists():
             errors.append(f"missing SQL template: {file_name}")
             continue
-        sql = render_sql_from_template(path, incident_id)
+        sql = render_sql_from_template(path, template_vars)
         try:
             rows, duration_ms = coral.run_sql(sql)
             runs.append(QueryRun(name=name, rows=rows, duration_ms=duration_ms))

@@ -1,20 +1,14 @@
--- SQL 03: Error and Latency Spike Context
+-- SQL 03: Alerting Monitor Context (Datadog)
+-- Coral's Datadog connector exposes monitors and incidents; no raw metrics table exists.
+-- Alerting monitors (Alert/Warn/No Data) serve as the telemetry proxy.
 
-WITH window AS (
-  SELECT
-    i.id AS incident_id,
-    i.created_at AS t0
-  FROM pagerduty.incidents i
-  WHERE i.id = '{{INCIDENT_ID}}'
-)
 SELECT
-  m.service,
-  m.metric_name,
-  m.value,
-  m.timestamp,
-  m.tags
-FROM datadog.metrics m
-CROSS JOIN window w
-WHERE m.timestamp BETWEEN w.t0 - INTERVAL '30 minutes' AND w.t0 + INTERVAL '90 minutes'
-  AND m.metric_name IN ('error_rate', 'p95_latency')
-ORDER BY m.timestamp ASC;
+  m.name AS metric_name,
+  m.status AS value,
+  m.tags,
+  m.type AS service,
+  m.modified AS timestamp
+FROM datadog.monitors m
+WHERE m.status IN ('Alert', 'Warn', 'No Data')
+ORDER BY m.modified DESC
+LIMIT 30;
