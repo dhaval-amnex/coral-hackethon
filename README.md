@@ -106,6 +106,11 @@ Run full finalization pipeline:
 python -m incident_captain.cli finalize --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
 ```
 
+Generate prioritized pending checklist:
+```bash
+python -m incident_captain.cli next-actions --report-dir output/report --output-dir output/report
+```
+
 One-command full demo pipeline:
 ```bash
 python -m incident_captain.cli demo-run --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json

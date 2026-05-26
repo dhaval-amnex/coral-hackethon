@@ -11,6 +11,7 @@ from .exporters import write_json, write_markdown
 from .finalize import write_final_summary
 from .impact import write_impact_report
 from .metrics import append_run_metrics
+from .next_actions import write_next_actions
 from .orchestration import run_deterministic_workflow, write_workflow_log
 from .progress import write_progress_report
 from .quality import run_quality_gate
@@ -172,6 +173,10 @@ def build_parser() -> argparse.ArgumentParser:
     finalize.add_argument("--coral-bin", default="coral", help="Path to coral executable.")
     finalize.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     finalize.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+
+    next_cmd = sub.add_parser("next-actions", help="Generate prioritized pending actions from report artifacts.")
+    next_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
+    next_cmd.add_argument("--output-dir", default="output/report", help="Directory for next-actions output.")
     return parser
 
 
@@ -540,6 +545,17 @@ def cmd_finalize(args: argparse.Namespace) -> int:
     return 0 if rc_release == 0 else 1
 
 
+def cmd_next_actions(args: argparse.Namespace) -> int:
+    out_dir = Path(args.output_dir)
+    out_json = out_dir / "next_actions.json"
+    out_md = out_dir / "next_actions.md"
+    payload = write_next_actions(Path(args.report_dir), out_json, out_md)
+    print(json.dumps(payload, indent=2))
+    print(f"Wrote: {out_json}")
+    print(f"Wrote: {out_md}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -572,6 +588,8 @@ def main() -> int:
             return cmd_release_check(args)
         if args.command == "finalize":
             return cmd_finalize(args)
+        if args.command == "next-actions":
+            return cmd_next_actions(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
