@@ -12,6 +12,7 @@ from .doctor import build_doctor_report
 from .exporters import write_json, write_markdown
 from .external_kit import write_external_kit
 from .finalize import write_final_summary
+from .handoff import write_handoff_note
 from .impact import write_impact_report
 from .import_evidence import import_live_evidence
 from .judge_pack import create_judge_pack
@@ -224,6 +225,10 @@ def build_parser() -> argparse.ArgumentParser:
     pack_cmd.add_argument("--source-dir", default="", help="Source directory to zip (defaults to latest bundle).")
     pack_cmd.add_argument("--bundle-root", default="output/bundles", help="Bundle root to auto-pick latest from.")
     pack_cmd.add_argument("--output-zip", default="output/judge_pack.zip", help="Output zip file path.")
+
+    handoff_cmd = sub.add_parser("handoff-note", help="Generate a concise handoff markdown from latest reports.")
+    handoff_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
+    handoff_cmd.add_argument("--output-file", default="output/report/handoff_note.md", help="Output markdown file.")
     return parser
 
 
@@ -729,6 +734,12 @@ def cmd_judge_pack(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_handoff_note(args: argparse.Namespace) -> int:
+    payload = write_handoff_note(Path(args.report_dir), Path(args.output_file))
+    print(json.dumps({"written": args.output_file, "summary": payload}, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -777,6 +788,8 @@ def main() -> int:
             return cmd_status_dashboard(args)
         if args.command == "judge-pack":
             return cmd_judge_pack(args)
+        if args.command == "handoff-note":
+            return cmd_handoff_note(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
