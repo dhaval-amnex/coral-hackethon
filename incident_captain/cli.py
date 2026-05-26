@@ -185,6 +185,8 @@ def build_parser() -> argparse.ArgumentParser:
     finalize.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
     finalize.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     finalize.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+    finalize.add_argument("--github-owner", default="", help="GitHub org/user for deploy correlation.")
+    finalize.add_argument("--github-repo", default="", help="GitHub repo name for deploy correlation.")
 
     next_cmd = sub.add_parser("next-actions", help="Generate prioritized pending actions from report artifacts.")
     next_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
@@ -604,6 +606,8 @@ def cmd_finalize(args: argparse.Namespace) -> int:
     demo_args.coral_bin = args.coral_bin
     demo_args.min_success_rate = args.min_success_rate
     demo_args.min_improvement_percent = args.min_improvement_percent
+    demo_args.github_owner = getattr(args, "github_owner", "")
+    demo_args.github_repo = getattr(args, "github_repo", "")
     rc = cmd_demo_run(demo_args)
     if rc != 0:
         return rc

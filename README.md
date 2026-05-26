@@ -2,6 +2,16 @@
 
 Incident Captain is a Track 1 Enterprise Agent project built on Coral. It correlates incidents across PagerDuty, GitHub, telemetry, and Slack to produce a structured root-cause briefing.
 
+## Submission Narrative
+- Problem:
+  Enterprise incident triage is fragmented across alerting, source control, observability, and team context tools. Engineers lose critical minutes stitching evidence manually while outages continue.
+- Sources used:
+  `pagerduty`, `github`, `datadog`, and `slack` (where token scope allows), all queried through Coral.
+- One-query cross-source value:
+  Incident Captain uses Coral SQL to correlate active incidents, recent deploy context, telemetry signals, and team communication metadata in one deterministic workflow instead of many disconnected tool calls.
+- Measurable impact:
+  Current benchmark artifacts report up to **67.74% triage-time improvement** with a reusable incident briefing output, quality gate, scorecard, and submission bundle.
+
 ## What this includes
 - End-to-end execution plan in `plan/`
 - Submission assets and templates in `deliverables/`
