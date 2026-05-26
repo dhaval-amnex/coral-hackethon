@@ -10,6 +10,7 @@ from .exporters import write_json, write_markdown
 from .impact import write_impact_report
 from .metrics import append_run_metrics
 from .orchestration import run_deterministic_workflow, write_workflow_log
+from .quality import run_quality_gate
 from .reporting import write_demo_report
 
 
@@ -93,6 +94,18 @@ def build_parser() -> argparse.ArgumentParser:
     impact.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline JSON file.")
     impact.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Run metrics JSONL file.")
     impact.add_argument("--output-dir", default="output/report", help="Directory for impact report output.")
+
+    quality = sub.add_parser("quality-gate", help="Run submission readiness checks.")
+    quality.add_argument("--incident-id", required=True, help="Incident identifier.")
+    quality.add_argument("--output-dir", default="output", help="Output artifact directory.")
+    quality.add_argument("--report-dir", default="output/report", help="Report artifact directory.")
+    quality.add_argument("--min-success-rate", type=float, default=0.7, help="Minimum demo success rate.")
+    quality.add_argument(
+        "--min-improvement-percent",
+        type=float,
+        default=10.0,
+        help="Minimum time-saved improvement percent.",
+    )
     return parser
 
 
@@ -225,6 +238,18 @@ def cmd_impact_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_quality_gate(args: argparse.Namespace) -> int:
+    result = run_quality_gate(
+        incident_id=args.incident_id,
+        output_dir=Path(args.output_dir),
+        report_dir=Path(args.report_dir),
+        min_success_rate=args.min_success_rate,
+        min_improvement_percent=args.min_improvement_percent,
+    )
+    print(json.dumps(result, indent=2))
+    return 0 if result["passed"] else 1
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -241,6 +266,8 @@ def main() -> int:
             return cmd_submission_bundle(args)
         if args.command == "impact-report":
             return cmd_impact_report(args)
+        if args.command == "quality-gate":
+            return cmd_quality_gate(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:

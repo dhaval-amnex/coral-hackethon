@@ -81,6 +81,11 @@ Generate impact report (time saved):
 python -m incident_captain.cli impact-report --baseline-file deliverables/mock/baseline_times.json --metrics-log output/run_metrics.jsonl --output-dir output/report
 ```
 
+Run final quality gate:
+```bash
+python -m incident_captain.cli quality-gate --incident-id INC-1001 --output-dir output --report-dir output/report --min-success-rate 0.7 --min-improvement-percent 10
+```
+
 Outputs:
 - `output/INC-1234.json`
 - `output/INC-1234.md`
