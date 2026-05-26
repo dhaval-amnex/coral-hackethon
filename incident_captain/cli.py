@@ -7,6 +7,7 @@ from pathlib import Path
 from .batch import write_batch_summary
 from .bundling import create_submission_bundle
 from .coral import CoralClient, CoralError
+from .dashboard import write_dashboard
 from .doctor import build_doctor_report
 from .exporters import write_json, write_markdown
 from .external_kit import write_external_kit
@@ -201,6 +202,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor_cmd = sub.add_parser("doctor", help="Run local environment diagnostics.")
     doctor_cmd.add_argument("--root", default=".", help="Project root path.")
+
+    dash_cmd = sub.add_parser("status-dashboard", help="Generate one-page status dashboard from reports.")
+    dash_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
+    dash_cmd.add_argument("--output-file", default="output/report/status_dashboard.md", help="Output markdown file.")
     return parser
 
 
@@ -639,6 +644,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_status_dashboard(args: argparse.Namespace) -> int:
+    payload = write_dashboard(Path(args.report_dir), Path(args.output_file))
+    print(json.dumps({"written": args.output_file, "has_reports": {k: bool(v) for k, v in payload.items()}}, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -681,6 +692,8 @@ def main() -> int:
             return cmd_live_unblock(args)
         if args.command == "doctor":
             return cmd_doctor(args)
+        if args.command == "status-dashboard":
+            return cmd_status_dashboard(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:

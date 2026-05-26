@@ -131,6 +131,11 @@ Run environment diagnostics:
 python -m incident_captain.cli doctor --root .
 ```
 
+Generate one-page status dashboard:
+```bash
+python -m incident_captain.cli status-dashboard --report-dir output/report --output-file output/report/status_dashboard.md
+```
+
 One-command full demo pipeline:
 ```bash
 python -m incident_captain.cli demo-run --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
