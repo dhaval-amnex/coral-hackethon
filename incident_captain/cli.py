@@ -11,6 +11,7 @@ from .exporters import write_json, write_markdown
 from .impact import write_impact_report
 from .metrics import append_run_metrics
 from .orchestration import run_deterministic_workflow, write_workflow_log
+from .progress import write_progress_report
 from .quality import run_quality_gate
 from .reporting import write_demo_report
 from .scorecard import write_scorecard
@@ -141,6 +142,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to quality gate result JSON file.",
     )
     scorecard.add_argument("--output-dir", default="output/report", help="Directory for scorecard output.")
+
+    progress = sub.add_parser("progress-report", help="Generate implementation progress report.")
+    progress.add_argument("--root", default=".", help="Project root path.")
+    progress.add_argument("--output-dir", default="output/report", help="Directory for progress report output.")
     return parser
 
 
@@ -407,6 +412,17 @@ def cmd_scorecard(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_progress_report(args: argparse.Namespace) -> int:
+    out_dir = Path(args.output_dir)
+    out_json = out_dir / "progress_report.json"
+    out_md = out_dir / "progress_report.md"
+    report = write_progress_report(Path(args.root), out_json, out_md)
+    print(json.dumps(report, indent=2))
+    print(f"Wrote: {out_json}")
+    print(f"Wrote: {out_md}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -431,6 +447,8 @@ def main() -> int:
             return cmd_batch_run(args)
         if args.command == "scorecard":
             return cmd_scorecard(args)
+        if args.command == "progress-report":
+            return cmd_progress_report(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
