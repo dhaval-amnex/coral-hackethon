@@ -108,7 +108,7 @@ python -m incident_captain.cli live-readiness --root . --output-dir output/repor
 
 Run final go/no-go release check:
 ```bash
-python -m incident_captain.cli release-check --root . --output-dir output/report
+python -m incident_captain.cli release-check --root . --output-dir output/report --min-progress-percent 90 --min-scorecard-overall 70
 ```
 
 Run full finalization pipeline:

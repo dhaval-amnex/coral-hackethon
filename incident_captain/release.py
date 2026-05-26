@@ -35,10 +35,38 @@ def build_release_check(root: Path) -> dict[str, Any]:
         quality_gate=quality_gate,
     )
 
+    return _build_release_check_with_thresholds(
+        root=root,
+        min_progress_percent=90.0,
+        min_scorecard_overall=70.0,
+    )
+
+
+def _build_release_check_with_thresholds(
+    *,
+    root: Path,
+    min_progress_percent: float,
+    min_scorecard_overall: float,
+) -> dict[str, Any]:
+    output_dir = root / "output"
+    report_dir = output_dir / "report"
+
+    progress = build_progress_report(root)
+    readiness = build_live_readiness_report(root)
+
+    demo_report = _read_json(report_dir / "demo_report.json")
+    impact_report = _read_json(report_dir / "impact_report.json")
+    quality_gate = _read_json(report_dir / "quality_gate.json")
+    scorecard = build_scorecard(
+        demo_report=demo_report,
+        impact_report=impact_report,
+        quality_gate=quality_gate,
+    )
+
     go_for_submission = (
-        progress["progress_percent"] >= 90.0
+        progress["progress_percent"] >= min_progress_percent
         and bool(quality_gate.get("passed", False))
-        and scorecard["overall_score"] >= 75.0
+        and scorecard["overall_score"] >= min_scorecard_overall
     )
     go_for_live_submission = go_for_submission and readiness["ready_for_live_submission"]
 
@@ -57,6 +85,10 @@ def build_release_check(root: Path) -> dict[str, Any]:
         "go_for_live_submission": go_for_live_submission,
         "progress_percent": progress["progress_percent"],
         "scorecard_overall": scorecard["overall_score"],
+        "thresholds": {
+            "min_progress_percent": min_progress_percent,
+            "min_scorecard_overall": min_scorecard_overall,
+        },
         "quality_gate_passed": bool(quality_gate.get("passed", False)),
         "live_readiness": readiness["ready_for_live_submission"],
         "live_blockers": readiness["blockers"],
@@ -64,8 +96,19 @@ def build_release_check(root: Path) -> dict[str, Any]:
     }
 
 
-def write_release_check(root: Path, out_json: Path, out_md: Path) -> dict[str, Any]:
-    report = build_release_check(root)
+def write_release_check(
+    root: Path,
+    out_json: Path,
+    out_md: Path,
+    *,
+    min_progress_percent: float = 90.0,
+    min_scorecard_overall: float = 70.0,
+) -> dict[str, Any]:
+    report = _build_release_check_with_thresholds(
+        root=root,
+        min_progress_percent=min_progress_percent,
+        min_scorecard_overall=min_scorecard_overall,
+    )
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -85,4 +128,3 @@ def write_release_check(root: Path, out_json: Path, out_md: Path) -> dict[str, A
     lines.extend([f"- {a}" for a in report["next_actions"]])
     out_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return report
-

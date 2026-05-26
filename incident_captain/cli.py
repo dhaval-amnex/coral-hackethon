@@ -173,6 +173,8 @@ def build_parser() -> argparse.ArgumentParser:
     release = sub.add_parser("release-check", help="Generate final go/no-go release decision report.")
     release.add_argument("--root", default=".", help="Project root path.")
     release.add_argument("--output-dir", default="output/report", help="Directory for release report output.")
+    release.add_argument("--min-progress-percent", type=float, default=90.0, help="Minimum progress percent.")
+    release.add_argument("--min-scorecard-overall", type=float, default=70.0, help="Minimum scorecard overall.")
 
     finalize = sub.add_parser("finalize", parents=[common], help="Run full finalization pipeline and emit final summary.")
     finalize.add_argument("--incident-id", required=True, help="Incident identifier.")
@@ -187,6 +189,8 @@ def build_parser() -> argparse.ArgumentParser:
     finalize.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
     finalize.add_argument("--github-owner", default="", help="GitHub org/user for deploy correlation.")
     finalize.add_argument("--github-repo", default="", help="GitHub repo name for deploy correlation.")
+    finalize.add_argument("--min-progress-percent", type=float, default=90.0, help="Release-check minimum progress percent.")
+    finalize.add_argument("--min-scorecard-overall", type=float, default=70.0, help="Release-check minimum scorecard overall.")
 
     next_cmd = sub.add_parser("next-actions", help="Generate prioritized pending actions from report artifacts.")
     next_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
@@ -581,7 +585,13 @@ def cmd_release_check(args: argparse.Namespace) -> int:
     out_dir = Path(args.output_dir)
     out_json = out_dir / "release_check.json"
     out_md = out_dir / "release_check.md"
-    report = write_release_check(Path(args.root), out_json, out_md)
+    report = write_release_check(
+        Path(args.root),
+        out_json,
+        out_md,
+        min_progress_percent=args.min_progress_percent,
+        min_scorecard_overall=args.min_scorecard_overall,
+    )
     print(json.dumps(report, indent=2))
     print(f"Wrote: {out_json}")
     print(f"Wrote: {out_md}")
@@ -639,6 +649,8 @@ def cmd_finalize(args: argparse.Namespace) -> int:
     release_args.command = "release-check"
     release_args.root = args.root
     release_args.output_dir = args.report_dir
+    release_args.min_progress_percent = args.min_progress_percent
+    release_args.min_scorecard_overall = args.min_scorecard_overall
     rc_release = cmd_release_check(release_args)
 
     final_summary = {
