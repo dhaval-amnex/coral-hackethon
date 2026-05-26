@@ -21,6 +21,7 @@ dist/
 # Local config / secrets
 .env
 .env.*
+!.env.example
 *.local
 
 # Project runtime outputs
@@ -35,4 +36,3 @@ coral-*.zip
 Thumbs.db
 .vscode/
 .idea/
-
