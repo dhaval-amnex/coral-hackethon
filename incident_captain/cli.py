@@ -30,6 +30,7 @@ from .readiness import write_live_readiness_report
 from .release import write_release_check
 from .reporting import write_demo_report
 from .scorecard import write_scorecard
+from .webapi import run_server
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -301,6 +302,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     snapshot_live = sub.add_parser("snapshot-schema", parents=[common], help="Snapshot live Coral schema to output/catalog.")
     snapshot_live.add_argument("--output-dir", default="output/catalog", help="Directory for catalog snapshots.")
+
+    serve_cmd = sub.add_parser("serve-api", help="Run local HTTP API for frontend integration.")
+    serve_cmd.add_argument("--host", default="127.0.0.1", help="Bind host.")
+    serve_cmd.add_argument("--port", type=int, default=8787, help="Bind port.")
 
     return parser
 
@@ -1001,6 +1006,11 @@ def cmd_snapshot_schema(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve_api(args: argparse.Namespace) -> int:
+    run_server(host=args.host, port=args.port)
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -1063,6 +1073,8 @@ def main() -> int:
             return cmd_setup_sources(args)
         if args.command == "snapshot-schema":
             return cmd_snapshot_schema(args)
+        if args.command == "serve-api":
+            return cmd_serve_api(args)
         parser.error("unknown command")
         return 2
     except CoralError as exc:
