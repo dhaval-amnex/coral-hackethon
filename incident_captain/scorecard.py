@@ -19,6 +19,12 @@ def _clamp(x: float, lo: float = 0.0, hi: float = 100.0) -> float:
     return max(lo, min(hi, x))
 
 
+def _speed_score(avg_duration_ms: float) -> float:
+    # Linear speed score with a practical live-run floor:
+    # 0 ms => 100, 60,000+ ms => 0.
+    return _clamp(100.0 - (avg_duration_ms / 600.0))
+
+
 def build_scorecard(
     *,
     demo_report: dict[str, Any],
@@ -34,7 +40,7 @@ def build_scorecard(
     checks_total = len(checks) if isinstance(checks, list) else 0
 
     reliability = _clamp(success_rate * 100.0)
-    speed = _clamp(100.0 - (avg_duration_ms / 200.0))
+    speed = _speed_score(avg_duration_ms)
     impact = _clamp(improvement_percent)
     completeness = _clamp((checks_passed / checks_total) * 100.0) if checks_total else 0.0
     accuracy_proxy = _clamp((reliability * 0.6) + (completeness * 0.4))
@@ -97,4 +103,3 @@ def write_scorecard(
     ]
     out_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return scorecard
-

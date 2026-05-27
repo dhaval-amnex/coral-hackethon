@@ -36,7 +36,7 @@ def build_live_readiness_report(root: Path) -> dict[str, Any]:
     catalog_ready = _has_rows(tables_path) and _has_rows(columns_path) and _has_rows(filters_path)
 
     live_runs = 0
-    mock_runs = 0
+    non_live_runs = 0
     if metrics_path.exists():
         for line in metrics_path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
@@ -49,8 +49,8 @@ def build_live_readiness_report(root: Path) -> dict[str, Any]:
             mode = str(row.get("mode", "")).lower()
             if mode == "live":
                 live_runs += 1
-            elif mode == "mock":
-                mock_runs += 1
+            elif mode != "live":
+                non_live_runs += 1
 
     quality_gate = _read_json(quality_gate_path)
     quality_gate_passed = bool(quality_gate.get("passed")) if isinstance(quality_gate, dict) else False
@@ -71,7 +71,8 @@ def build_live_readiness_report(root: Path) -> dict[str, Any]:
         "signals": {
             "catalog_ready": catalog_ready,
             "live_runs": live_runs,
-            "mock_runs": mock_runs,
+            "non_live_runs": non_live_runs,
+            "mock_runs": non_live_runs,
             "quality_gate_passed": quality_gate_passed,
         },
         "expected_next_actions": [
@@ -94,7 +95,7 @@ def write_live_readiness_report(root: Path, out_json: Path, out_md: Path) -> dic
         f"- Ready for live submission: {report['ready_for_live_submission']}",
         f"- Catalog ready: {report['signals']['catalog_ready']}",
         f"- Live runs: {report['signals']['live_runs']}",
-        f"- Mock runs: {report['signals']['mock_runs']}",
+        f"- Non-live runs: {report['signals']['non_live_runs']}",
         f"- Quality gate passed: {report['signals']['quality_gate_passed']}",
         "",
         "## Blockers",
