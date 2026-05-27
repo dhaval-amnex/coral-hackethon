@@ -119,3 +119,8 @@ export function generateJudgePack(input?: {
     body: JSON.stringify(input ?? {}),
   })
 }
+
+export function getJudgePackDownloadUrl(path = "output/judge_pack.zip"): string {
+  const q = new URLSearchParams({ path })
+  return `${API_BASE}/api/judge-pack/download?${q.toString()}`
+}

@@ -21,6 +21,7 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
   const [error, setError] = useState("")
   const [result, setResult] = useState<AnalyzeResponse | null>(null)
   const [jobId, setJobId] = useState("")
+  const [jobStatus, setJobStatus] = useState<"idle" | "queued" | "running" | "done" | "failed">("idle")
 
   async function runAnalysis() {
     setLoading(true)
@@ -32,8 +33,11 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
         github_repo: repo.trim(),
       })
       setJobId(start.job_id)
+      setJobStatus("queued")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run analysis")
+      setLoading(false)
+      setJobStatus("failed")
     }
   }
 
@@ -42,23 +46,27 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
     const timer = setInterval(async () => {
       try {
         const status = await getAnalyzeJobStatus(jobId)
+        setJobStatus(status.status === "running" ? "running" : status.status)
         if (status.status === "done" && status.result) {
           setResult(status.result)
           onAnalyzed(status.result.incident_id, status.result)
           setLoading(false)
           setJobId("")
+          setJobStatus("done")
           clearInterval(timer)
         }
         if (status.status === "failed") {
           setError(status.error || "Analysis failed")
           setLoading(false)
           setJobId("")
+          setJobStatus("failed")
           clearInterval(timer)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to poll analysis job")
         setLoading(false)
         setJobId("")
+        setJobStatus("failed")
         clearInterval(timer)
       }
     }, 1200)
@@ -90,6 +98,16 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
             </Button>
           </div>
           {error && <p className="text-sm text-destructive md:col-span-2">{error}</p>}
+          {loading && (
+            <div className="md:col-span-2">
+              <p className="mb-2 text-xs text-muted-foreground">Progress</p>
+              <ol className="grid gap-1 text-xs">
+                <li>1. queued {jobStatus === "queued" || jobStatus === "running" || jobStatus === "done" ? "✓" : ""}</li>
+                <li>2. running {jobStatus === "running" || jobStatus === "done" ? "✓" : ""}</li>
+                <li>3. completed {jobStatus === "done" ? "✓" : ""}</li>
+              </ol>
+            </div>
+          )}
         </CardContent>
       </Card>
 

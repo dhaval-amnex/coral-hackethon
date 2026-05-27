@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react"
 
-import { getReadiness } from "@/lib/api"
+import { getReadiness, getRunHistory } from "@/lib/api"
 import type { ReadinessResponse } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function ReadinessPage() {
   const [data, setData] = useState<ReadinessResponse | null>(null)
+  const [trend, setTrend] = useState<Array<{ id: string; score: number }>>([])
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -18,6 +19,15 @@ export function ReadinessPage() {
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to load readiness")
       })
+    getRunHistory()
+      .then((rows) => {
+        const points = rows.slice(-8).map((r) => ({
+          id: String(r.incident_id ?? "n/a"),
+          score: Math.max(0, 100 - Number(r.query_errors ?? 0) * 25),
+        }))
+        setTrend(points)
+      })
+      .catch(() => setTrend([]))
   }, [])
 
   if (error) {
@@ -64,7 +74,30 @@ export function ReadinessPage() {
           </ul>
         </CardContent>
       </Card>
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle>Recent Reliability Trend</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {trend.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No trend data yet.</p>
+          ) : (
+            <div className="grid gap-2">
+              {trend.map((p, idx) => (
+                <div key={`${p.id}-${idx}`} className="grid gap-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>{p.id}</span>
+                    <span>{p.score.toFixed(0)}</span>
+                  </div>
+                  <div className="h-2 rounded bg-muted">
+                    <div className="h-2 rounded bg-primary" style={{ width: `${p.score}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
-

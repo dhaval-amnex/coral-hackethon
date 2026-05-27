@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import threading
 import uuid
 from http import HTTPStatus
@@ -10,7 +9,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from .briefing import compose_brief
 from .config import validate_source_env
 from .coral import CoralClient, CoralError, load_env_file
 from .metrics import append_run_metrics
@@ -35,6 +33,16 @@ def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict[s
     handler.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     handler.end_headers()
     handler.wfile.write(body)
+
+
+def _binary_response(handler: BaseHTTPRequestHandler, status: int, content: bytes, filename: str) -> None:
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/zip")
+    handler.send_header("Content-Length", str(len(content)))
+    handler.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+    handler.send_header("Access-Control-Allow-Origin", "*")
+    handler.end_headers()
+    handler.wfile.write(content)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -159,6 +167,15 @@ class _Handler(BaseHTTPRequestHandler):
                 _json_response(self, HTTPStatus.NOT_FOUND, {"error": "job not found"})
                 return
             _json_response(self, HTTPStatus.OK, job)
+            return
+
+        if path == "/api/judge-pack/download":
+            requested = (qs.get("path", ["output/judge_pack.zip"])[0] or "output/judge_pack.zip").strip()
+            file_path = Path(requested)
+            if not file_path.exists() or not file_path.is_file():
+                _json_response(self, HTTPStatus.NOT_FOUND, {"error": "judge pack not found"})
+                return
+            _binary_response(self, HTTPStatus.OK, file_path.read_bytes(), file_path.name)
             return
 
         _json_response(self, HTTPStatus.NOT_FOUND, {"error": "not found"})

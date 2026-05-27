@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { generateJudgePack, runShipReadiness } from "@/lib/api"
+import { generateJudgePack, getJudgePackDownloadUrl, runShipReadiness } from "@/lib/api"
 import type { ShipReadinessResponse } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -75,7 +75,19 @@ export function ArtifactsPage() {
           <Button variant="outline" onClick={generatePack} disabled={loading}>
             {loading ? "Generating..." : "Generate judge_pack.zip"}
           </Button>
-          {judgePackPath ? <p className="text-sm">Generated: {judgePackPath}</p> : null}
+          {judgePackPath ? (
+            <div className="grid gap-2 text-sm">
+              <p>Generated: {judgePackPath}</p>
+              <a
+                className="text-primary underline"
+                href={getJudgePackDownloadUrl(judgePackPath)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Download judge_pack.zip
+              </a>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
       {result && (
