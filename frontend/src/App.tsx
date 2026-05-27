@@ -11,6 +11,8 @@ import { HistoryPage } from "@/features/history-page"
 import { ReadinessPage } from "@/features/readiness-page"
 import type { AnalyzeResponse } from "@/lib/types"
 import { getSourceHealth } from "@/lib/api"
+import { getArtifactsStatus } from "@/lib/api"
+import type { ArtifactsStatusResponse } from "@/lib/types"
 
 type Section = "dashboard" | "analyze" | "evidence" | "readiness" | "artifacts" | "history"
 
@@ -28,6 +30,7 @@ export function App() {
   const [activeIncidentId, setActiveIncidentId] = useState("INC-1001")
   const [lastAnalyze, setLastAnalyze] = useState<AnalyzeResponse | null>(null)
   const [sourceHealth, setSourceHealth] = useState<Record<string, string>>({})
+  const [artifactsStatus, setArtifactsStatus] = useState<ArtifactsStatusResponse | null>(null)
 
   useEffect(() => {
     getSourceHealth()
@@ -35,8 +38,21 @@ export function App() {
       .catch(() => setSourceHealth({}))
   }, [])
 
+  useEffect(() => {
+    getArtifactsStatus()
+      .then((x) => setArtifactsStatus(x))
+      .catch(() => setArtifactsStatus(null))
+  }, [section, lastAnalyze])
+
   function renderSection() {
-    if (section === "dashboard") return <DashboardPage activeIncidentId={activeIncidentId} />
+    if (section === "dashboard")
+      return (
+        <DashboardPage
+          activeIncidentId={activeIncidentId}
+          onNavigate={(next) => setSection(next)}
+          artifactsStatus={artifactsStatus}
+        />
+      )
     if (section === "analyze")
       return (
         <AnalyzePage

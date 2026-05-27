@@ -178,6 +178,56 @@ class _Handler(BaseHTTPRequestHandler):
             _binary_response(self, HTTPStatus.OK, file_path.read_bytes(), file_path.name)
             return
 
+        if path == "/api/artifacts/status":
+            output_dir = Path((qs.get("output_dir", ["output"])[0] or "output").strip())
+            report_dir = Path((qs.get("report_dir", ["output/report"])[0] or "output/report").strip())
+            paths = {
+                "judge_pack_zip": output_dir / "judge_pack.zip",
+                "release_check_json": report_dir / "release_check.json",
+                "release_check_md": report_dir / "release_check.md",
+                "status_dashboard_md": report_dir / "status_dashboard.md",
+                "handoff_note_md": report_dir / "handoff_note.md",
+                "scorecard_json": report_dir / "scorecard.json",
+                "quality_gate_json": report_dir / "quality_gate.json",
+            }
+            payload: dict[str, Any] = {}
+            for key, p in paths.items():
+                payload[key] = {
+                    "exists": p.exists(),
+                    "path": str(p),
+                    "download_url": f"/api/artifacts/download?path={p.as_posix()}",
+                }
+            _json_response(self, HTTPStatus.OK, {"artifacts": payload})
+            return
+
+        if path == "/api/artifacts/download":
+            requested = (qs.get("path", [""])[0] or "").strip()
+            if not requested:
+                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": "path is required"})
+                return
+            file_path = Path(requested)
+            if not file_path.exists() or not file_path.is_file():
+                _json_response(self, HTTPStatus.NOT_FOUND, {"error": "artifact not found"})
+                return
+            body = file_path.read_bytes()
+            filename = file_path.name
+            handler_status = HTTPStatus.OK
+            self.send_response(handler_status)
+            if filename.endswith(".json"):
+                self.send_header("Content-Type", "application/json")
+            elif filename.endswith(".md"):
+                self.send_header("Content-Type", "text/markdown")
+            elif filename.endswith(".zip"):
+                self.send_header("Content-Type", "application/zip")
+            else:
+                self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         _json_response(self, HTTPStatus.NOT_FOUND, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802

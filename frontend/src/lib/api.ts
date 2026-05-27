@@ -4,6 +4,7 @@ import type {
   AnalyzeJobStatusResponse,
   EvidenceResponse,
   JudgePackResponse,
+  ArtifactsStatusResponse,
   ReadinessResponse,
   RunHistoryRow,
   ShipReadinessResponse,
@@ -123,4 +124,17 @@ export function generateJudgePack(input?: {
 export function getJudgePackDownloadUrl(path = "output/judge_pack.zip"): string {
   const q = new URLSearchParams({ path })
   return `${API_BASE}/api/judge-pack/download?${q.toString()}`
+}
+
+export function getArtifactsStatus(
+  outputDir = "output",
+  reportDir = "output/report",
+): Promise<ArtifactsStatusResponse> {
+  const q = new URLSearchParams({ output_dir: outputDir, report_dir: reportDir })
+  return request<ArtifactsStatusResponse>(`/api/artifacts/status?${q.toString()}`)
+}
+
+export function getArtifactDownloadUrl(path: string): string {
+  const q = new URLSearchParams({ path })
+  return `${API_BASE}/api/artifacts/download?${q.toString()}`
 }

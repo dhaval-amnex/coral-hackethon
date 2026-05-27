@@ -92,3 +92,13 @@ export interface JudgePackResponse {
   source_dir: string
   output_zip: string
 }
+
+export interface ArtifactFileStatus {
+  exists: boolean
+  path: string
+  download_url: string
+}
+
+export interface ArtifactsStatusResponse {
+  artifacts: Record<string, ArtifactFileStatus>
+}
