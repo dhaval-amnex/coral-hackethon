@@ -40,6 +40,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--coral-bin", default=find_coral_bin(), help="Path to coral executable.")
+    common.add_argument("--coral-timeout-sec", type=float, default=30.0, help="Timeout for each Coral command.")
+    common.add_argument("--coral-retries", type=int, default=2, help="Retry attempts for timeout-prone Coral commands.")
+    common.add_argument("--coral-backoff-sec", type=float, default=0.5, help="Base backoff seconds between retries.")
     common.add_argument(
         "--sql-dir",
         default="deliverables/sql",
@@ -322,12 +325,21 @@ def _validate_required_env(sources: list[str]) -> None:
     )
 
 
+def _build_coral_client(args: argparse.Namespace) -> CoralClient:
+    return CoralClient(
+        coral_bin=args.coral_bin,
+        timeout_sec=float(getattr(args, "coral_timeout_sec", 30.0)),
+        retries=int(getattr(args, "coral_retries", 2)),
+        backoff_sec=float(getattr(args, "coral_backoff_sec", 0.5)),
+    )
+
+
 def cmd_analyze(args: argparse.Namespace) -> int:
     _load_env(args)
     _validate_required_env(["pagerduty", "datadog", "slack"])
     if getattr(args, "github_owner", "") and getattr(args, "github_repo", ""):
         _validate_required_env(["github"])
-    coral = CoralClient(coral_bin=args.coral_bin)
+    coral = _build_coral_client(args)
     sql_dir = Path(args.sql_dir)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -379,7 +391,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
 def cmd_health(args: argparse.Namespace) -> int:
     _load_env(args)
     _validate_required_env(args.sources)
-    coral = CoralClient(coral_bin=args.coral_bin)
+    coral = _build_coral_client(args)
     status = coral.source_health(args.sources)
     print(json.dumps(status, indent=2))
     return 0 if all(v == "ok" for v in status.values()) else 1
@@ -388,7 +400,7 @@ def cmd_health(args: argparse.Namespace) -> int:
 def cmd_snapshot_catalog(args: argparse.Namespace) -> int:
     _load_env(args)
     _validate_required_env(["pagerduty", "github", "slack", "datadog"])
-    coral = CoralClient(coral_bin=args.coral_bin)
+    coral = _build_coral_client(args)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -479,6 +491,9 @@ def cmd_demo_run(args: argparse.Namespace) -> int:
     analyze_args.sql_dir = args.sql_dir
     analyze_args.env_file = getattr(args, "env_file", ".env")
     analyze_args.command = "analyze"
+    analyze_args.coral_timeout_sec = getattr(args, "coral_timeout_sec", 30.0)
+    analyze_args.coral_retries = getattr(args, "coral_retries", 2)
+    analyze_args.coral_backoff_sec = getattr(args, "coral_backoff_sec", 0.5)
     analyze_args.incident_id = args.incident_id
     analyze_args.output_dir = args.output_dir
     analyze_args.view = "executive"
@@ -558,6 +573,9 @@ def cmd_batch_run(args: argparse.Namespace) -> int:
         demo_args.min_success_rate = args.min_success_rate
         demo_args.min_improvement_percent = args.min_improvement_percent
         demo_args.recent_runs = getattr(args, "recent_runs", 0)
+        demo_args.coral_timeout_sec = getattr(args, "coral_timeout_sec", 30.0)
+        demo_args.coral_retries = getattr(args, "coral_retries", 2)
+        demo_args.coral_backoff_sec = getattr(args, "coral_backoff_sec", 0.5)
         rc = cmd_demo_run(demo_args)
         rows.append(
             {
@@ -648,6 +666,9 @@ def cmd_finalize(args: argparse.Namespace) -> int:
     demo_args.min_success_rate = args.min_success_rate
     demo_args.min_improvement_percent = args.min_improvement_percent
     demo_args.recent_runs = getattr(args, "recent_runs", 0)
+    demo_args.coral_timeout_sec = getattr(args, "coral_timeout_sec", 30.0)
+    demo_args.coral_retries = getattr(args, "coral_retries", 2)
+    demo_args.coral_backoff_sec = getattr(args, "coral_backoff_sec", 0.5)
     demo_args.github_owner = getattr(args, "github_owner", "")
     demo_args.github_repo = getattr(args, "github_repo", "")
     rc = cmd_demo_run(demo_args)
@@ -818,6 +839,9 @@ def cmd_close_live_loop(args: argparse.Namespace) -> int:
     finalize_args.baseline_file = args.baseline_file
     finalize_args.sql_dir = "deliverables/sql"
     finalize_args.coral_bin = "coral"
+    finalize_args.coral_timeout_sec = 30.0
+    finalize_args.coral_retries = 2
+    finalize_args.coral_backoff_sec = 0.5
     finalize_args.min_success_rate = 0.7
     finalize_args.min_improvement_percent = 10.0
     finalize_args.recent_runs = 0
@@ -927,7 +951,7 @@ def cmd_live_playbook(args: argparse.Namespace) -> int:
 def cmd_setup_sources(args: argparse.Namespace) -> int:
     _load_env(args)
     _validate_required_env(args.sources)
-    coral = CoralClient(coral_bin=args.coral_bin)
+    coral = _build_coral_client(args)
     results: dict[str, str] = {}
     for source in args.sources:
         ok, msg = coral.setup_source(source)
@@ -955,7 +979,7 @@ def cmd_setup_sources(args: argparse.Namespace) -> int:
 def cmd_snapshot_schema(args: argparse.Namespace) -> int:
     _load_env(args)
     _validate_required_env(["pagerduty", "github", "slack", "datadog"])
-    coral = CoralClient(coral_bin=args.coral_bin)
+    coral = _build_coral_client(args)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 

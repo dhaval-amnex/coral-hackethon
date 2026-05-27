@@ -75,24 +75,47 @@ class QueryRun:
 
 
 class CoralClient:
-    def __init__(self, coral_bin: str = "coral") -> None:
+    def __init__(
+        self,
+        coral_bin: str = "coral",
+        *,
+        timeout_sec: float = 30.0,
+        retries: int = 2,
+        backoff_sec: float = 0.5,
+    ) -> None:
         self.coral_bin = coral_bin
+        self.timeout_sec = timeout_sec
+        self.retries = max(0, retries)
+        self.backoff_sec = max(0.0, backoff_sec)
 
     @staticmethod
     def _strip_comments(sql: str) -> str:
         lines = [ln for ln in sql.splitlines() if not ln.strip().startswith("--")]
         return "\n".join(lines).strip()
 
+    def _run_with_retry(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        attempt = 0
+        while True:
+            try:
+                return subprocess.run(
+                    args,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=self.timeout_sec,
+                )
+            except subprocess.TimeoutExpired as exc:
+                msg = f"command timed out after {self.timeout_sec}s: {' '.join(args[:3])}"
+                if attempt >= self.retries:
+                    raise CoralError(msg, category="network") from exc
+                time.sleep(self.backoff_sec * (2**attempt))
+                attempt += 1
+
     def run_sql(self, sql: str) -> tuple[list[dict[str, Any]], int]:
         sql = self._strip_comments(sql)
         started = time.perf_counter()
         try:
-            proc = subprocess.run(
-                [self.coral_bin, "sql", "--format", "json", sql],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            proc = self._run_with_retry([self.coral_bin, "sql", "--format", "json", sql])
         except FileNotFoundError as exc:
             raise CoralError(self._not_found_message(), category="not_found") from exc
         duration_ms = int((time.perf_counter() - started) * 1000)
@@ -111,12 +134,7 @@ class CoralClient:
         result: dict[str, str] = {}
         for src in sources:
             try:
-                proc = subprocess.run(
-                    [self.coral_bin, "source", "test", src],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
+                proc = self._run_with_retry([self.coral_bin, "source", "test", src])
             except FileNotFoundError as exc:
                 raise CoralError(self._not_found_message(), category="not_found") from exc
             result[src] = "ok" if proc.returncode == 0 else "failed"
@@ -130,13 +148,11 @@ class CoralClient:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=self.timeout_sec,
             )
-            proc = subprocess.run(
-                [self.coral_bin, "source", "add", name],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            proc = self._run_with_retry([self.coral_bin, "source", "add", name])
+        except subprocess.TimeoutExpired as exc:
+            raise CoralError(f"source setup timed out after {self.timeout_sec}s", category="network") from exc
         except FileNotFoundError as exc:
             raise CoralError(self._not_found_message(), category="not_found") from exc
         if proc.returncode == 0:
@@ -146,12 +162,7 @@ class CoralClient:
     def list_sources(self) -> list[str]:
         """Return names of currently configured sources."""
         try:
-            proc = subprocess.run(
-                [self.coral_bin, "source", "list"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            proc = self._run_with_retry([self.coral_bin, "source", "list"])
         except FileNotFoundError as exc:
             raise CoralError(self._not_found_message(), category="not_found") from exc
         lines = proc.stdout.strip().splitlines()

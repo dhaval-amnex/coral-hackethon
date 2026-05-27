@@ -22,6 +22,11 @@ python -m incident_captain.cli analyze --incident-id <INCIDENT_ID> --env-file .e
 python -m incident_captain.cli demo-run --incident-id <INCIDENT_ID> --env-file .env --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file output/baseline_times.json --github-owner <OWNER> --github-repo <REPO>
 ```
 
+Optional reliability flags for constrained networks:
+```bash
+--coral-timeout-sec 45 --coral-retries 3 --coral-backoff-sec 1.0
+```
+
 ## Release Artifacts
 ```bash
 python -m incident_captain.cli scorecard --report-dir output/report --quality-gate-file output/report/quality_gate.json --output-dir output/report
