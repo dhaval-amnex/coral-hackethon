@@ -5,11 +5,15 @@ import { getArtifactDownloadUrl } from "@/lib/api"
 
 interface DashboardPageProps {
   activeIncidentId: string
-  onNavigate: (section: "analyze" | "evidence" | "readiness" | "artifacts" | "history") => void
+  onNavigate: (section: "analyze" | "evidence" | "readiness" | "artifacts" | "submission" | "history") => void
   artifactsStatus: ArtifactsStatusResponse | null
   onRunFullDemo: () => Promise<void>
   demoRunning: boolean
   demoSteps: Array<{ name: string; status: "pending" | "running" | "done" | "failed"; detail?: string }>
+  presenterMode: boolean
+  onTogglePresenterMode: () => void
+  onResetPresenterChecklist: () => void
+  presenterChecklist: Array<{ name: string; done: boolean }>
 }
 
 export function DashboardPage({
@@ -19,6 +23,10 @@ export function DashboardPage({
   onRunFullDemo,
   demoRunning,
   demoSteps,
+  presenterMode,
+  onTogglePresenterMode,
+  onResetPresenterChecklist,
+  presenterChecklist,
 }: DashboardPageProps) {
   const artifactEntries = artifactsStatus ? Object.entries(artifactsStatus.artifacts) : []
 
@@ -52,6 +60,14 @@ export function DashboardPage({
           <CardTitle>Demo Runbook</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant={presenterMode ? "default" : "outline"} onClick={onTogglePresenterMode}>
+              {presenterMode ? "Presenter Mode: ON" : "Presenter Mode: OFF"}
+            </Button>
+            <Button variant="outline" onClick={onResetPresenterChecklist}>
+              Reset Checklist
+            </Button>
+          </div>
           <ol className="grid gap-2">
             <li>1. Open Analyze and run incident investigation.</li>
             <li>2. Review correlated evidence and diagnostics.</li>
@@ -72,7 +88,22 @@ export function DashboardPage({
             <Button variant="outline" onClick={() => onNavigate("artifacts")}>
               Go to Artifacts
             </Button>
+            <Button variant="outline" onClick={() => onNavigate("submission")}>
+              Go to Submission
+            </Button>
           </div>
+          {presenterMode ? (
+            <div className="grid gap-1">
+              <p className="font-medium">Presenter Checklist</p>
+              <ol className="grid gap-1 text-xs">
+                {presenterChecklist.map((item) => (
+                  <li key={item.name}>
+                    {item.done ? "done" : "pending"}: {item.name}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
           <div className="grid gap-1">
             <p className="font-medium">Demo Step Status</p>
             <ol className="grid gap-1 text-xs">

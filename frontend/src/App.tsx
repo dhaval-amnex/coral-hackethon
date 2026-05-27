@@ -47,6 +47,10 @@ export function App() {
     { name: "Ship-Readiness", status: "pending" },
     { name: "Judge-Pack", status: "pending" },
   ])
+  const [presenterMode, setPresenterMode] = useState(false)
+  const [visitedEvidence, setVisitedEvidence] = useState(false)
+  const [visitedReadiness, setVisitedReadiness] = useState(false)
+  const [visitedSubmission, setVisitedSubmission] = useState(false)
 
   useEffect(() => {
     getSourceHealth()
@@ -60,16 +64,41 @@ export function App() {
       .catch(() => setArtifactsStatus(null))
   }, [section, lastAnalyze])
 
+  function navigateTo(next: Section) {
+    setSection(next)
+    if (next === "evidence") setVisitedEvidence(true)
+    if (next === "readiness") setVisitedReadiness(true)
+    if (next === "submission") setVisitedSubmission(true)
+  }
+
+  function resetPresenterChecklist() {
+    setVisitedEvidence(false)
+    setVisitedReadiness(false)
+    setVisitedSubmission(false)
+  }
+
   function renderSection() {
     if (section === "dashboard")
       return (
         <DashboardPage
           activeIncidentId={activeIncidentId}
-          onNavigate={(next) => setSection(next)}
+          onNavigate={(next) => navigateTo(next)}
           artifactsStatus={artifactsStatus}
           onRunFullDemo={runFullDemo}
           demoRunning={demoRunning}
           demoSteps={demoSteps}
+          presenterMode={presenterMode}
+          onTogglePresenterMode={() => setPresenterMode((x) => !x)}
+          onResetPresenterChecklist={resetPresenterChecklist}
+          presenterChecklist={[
+            { name: "Analyze completed", done: Boolean(lastAnalyze) },
+            { name: "Evidence explored", done: visitedEvidence },
+            { name: "Readiness reviewed", done: visitedReadiness || visitedSubmission },
+            {
+              name: "Judge pack generated",
+              done: Boolean(artifactsStatus?.artifacts?.judge_pack_zip?.exists),
+            },
+          ]}
         />
       )
     if (section === "analyze")
@@ -177,7 +206,7 @@ export function App() {
                 key={item.id}
                 variant={section === item.id ? "default" : "outline"}
                 className="justify-start"
-                onClick={() => setSection(item.id)}
+                onClick={() => navigateTo(item.id)}
               >
                 {item.label}
               </Button>
