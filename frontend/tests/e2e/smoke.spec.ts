@@ -153,11 +153,10 @@ test("dashboard presenter mode and full demo entry are visible", async ({ page }
 
 test("submission console can run release check and judge pack", async ({ page }) => {
   await page.goto("/")
-  await page.getByRole("button", { name: "Submission" }).click()
+  await page.getByRole("button", { name: "Submission", exact: true }).click()
   await expect(page.getByText("Submission Console")).toBeVisible()
   await page.getByRole("button", { name: "Run Release Check" }).click()
   await expect(page.getByText("Go for submission: true")).toBeVisible()
   await page.getByRole("button", { name: "Generate Judge Pack" }).click()
   await expect(page.getByRole("link", { name: "Download judge_pack.zip" })).toBeVisible()
 })
-
