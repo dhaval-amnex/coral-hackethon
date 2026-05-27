@@ -10,8 +10,14 @@ import { EvidencePage } from "@/features/evidence-page"
 import { HistoryPage } from "@/features/history-page"
 import { ReadinessPage } from "@/features/readiness-page"
 import type { AnalyzeResponse } from "@/lib/types"
-import { getSourceHealth } from "@/lib/api"
-import { getArtifactsStatus } from "@/lib/api"
+import {
+  analyzeIncidentStart,
+  generateJudgePack,
+  getAnalyzeJobStatus,
+  getArtifactsStatus,
+  getSourceHealth,
+  runShipReadiness,
+} from "@/lib/api"
 import type { ArtifactsStatusResponse } from "@/lib/types"
 
 type Section = "dashboard" | "analyze" | "evidence" | "readiness" | "artifacts" | "history"
@@ -31,6 +37,14 @@ export function App() {
   const [lastAnalyze, setLastAnalyze] = useState<AnalyzeResponse | null>(null)
   const [sourceHealth, setSourceHealth] = useState<Record<string, string>>({})
   const [artifactsStatus, setArtifactsStatus] = useState<ArtifactsStatusResponse | null>(null)
+  const [demoRunning, setDemoRunning] = useState(false)
+  const [demoSteps, setDemoSteps] = useState<
+    Array<{ name: string; status: "pending" | "running" | "done" | "failed"; detail?: string }>
+  >([
+    { name: "Analyze", status: "pending" },
+    { name: "Ship-Readiness", status: "pending" },
+    { name: "Judge-Pack", status: "pending" },
+  ])
 
   useEffect(() => {
     getSourceHealth()
@@ -51,6 +65,9 @@ export function App() {
           activeIncidentId={activeIncidentId}
           onNavigate={(next) => setSection(next)}
           artifactsStatus={artifactsStatus}
+          onRunFullDemo={runFullDemo}
+          demoRunning={demoRunning}
+          demoSteps={demoSteps}
         />
       )
     if (section === "analyze")
@@ -66,6 +83,83 @@ export function App() {
     if (section === "readiness") return <ReadinessPage />
     if (section === "artifacts") return <ArtifactsPage />
     return <HistoryPage />
+  }
+
+  function setStepStatus(
+    name: "Analyze" | "Ship-Readiness" | "Judge-Pack",
+    status: "pending" | "running" | "done" | "failed",
+    detail = "",
+  ) {
+    setDemoSteps((prev) =>
+      prev.map((x) => (x.name === name ? { ...x, status, detail } : x)),
+    )
+  }
+
+  async function runFullDemo() {
+    if (demoRunning) return
+    setDemoRunning(true)
+    setDemoSteps([
+      { name: "Analyze", status: "pending" },
+      { name: "Ship-Readiness", status: "pending" },
+      { name: "Judge-Pack", status: "pending" },
+    ])
+    try {
+      setStepStatus("Analyze", "running")
+      const start = await analyzeIncidentStart({
+        incident_id: activeIncidentId || "INC-1001",
+      })
+      const jobId = start.job_id
+      let analyzeDone = false
+      for (let i = 0; i < 120; i += 1) {
+        const status = await getAnalyzeJobStatus(jobId)
+        if (status.status === "done" && status.result) {
+          setLastAnalyze(status.result)
+          setActiveIncidentId(status.result.incident_id)
+          setStepStatus("Analyze", "done")
+          analyzeDone = true
+          break
+        }
+        if (status.status === "failed") {
+          setStepStatus("Analyze", "failed", status.error || "failed")
+          throw new Error(status.error || "Analyze job failed")
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+      if (!analyzeDone) {
+        setStepStatus("Analyze", "failed", "timeout")
+        throw new Error("Analyze timeout")
+      }
+
+      setStepStatus("Ship-Readiness", "running")
+      const ship = await runShipReadiness({
+        incident_id: activeIncidentId || "INC-1001",
+        recent_runs: 1,
+      })
+      if (!ship.release_check.go_for_submission) {
+        setStepStatus("Ship-Readiness", "failed", "go_for_submission=false")
+        throw new Error("Ship-readiness failed")
+      }
+      setStepStatus("Ship-Readiness", "done")
+
+      setStepStatus("Judge-Pack", "running")
+      const pack = await generateJudgePack()
+      setStepStatus("Judge-Pack", "done", pack.output_zip)
+
+      const refreshed = await getArtifactsStatus()
+      setArtifactsStatus(refreshed)
+      setSection("artifacts")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Full demo failed"
+      setDemoSteps((prev) => {
+        const firstRunning = prev.find((x) => x.status === "running")
+        if (!firstRunning) return prev
+        return prev.map((x) =>
+          x.name === firstRunning.name ? { ...x, status: "failed", detail: message } : x,
+        )
+      })
+    } finally {
+      setDemoRunning(false)
+    }
   }
 
   return (

@@ -7,9 +7,19 @@ interface DashboardPageProps {
   activeIncidentId: string
   onNavigate: (section: "analyze" | "evidence" | "readiness" | "artifacts" | "history") => void
   artifactsStatus: ArtifactsStatusResponse | null
+  onRunFullDemo: () => Promise<void>
+  demoRunning: boolean
+  demoSteps: Array<{ name: string; status: "pending" | "running" | "done" | "failed"; detail?: string }>
 }
 
-export function DashboardPage({ activeIncidentId, onNavigate, artifactsStatus }: DashboardPageProps) {
+export function DashboardPage({
+  activeIncidentId,
+  onNavigate,
+  artifactsStatus,
+  onRunFullDemo,
+  demoRunning,
+  demoSteps,
+}: DashboardPageProps) {
   const artifactEntries = artifactsStatus ? Object.entries(artifactsStatus.artifacts) : []
 
   return (
@@ -49,6 +59,9 @@ export function DashboardPage({ activeIncidentId, onNavigate, artifactsStatus }:
             <li>4. Generate artifacts and judge pack download.</li>
           </ol>
           <div className="flex flex-wrap gap-2">
+            <Button variant="default" onClick={() => void onRunFullDemo()} disabled={demoRunning}>
+              {demoRunning ? "Running Full Demo..." : "Start Full Demo"}
+            </Button>
             <Button onClick={() => onNavigate("analyze")}>Go to Analyze</Button>
             <Button variant="outline" onClick={() => onNavigate("evidence")}>
               Go to Evidence
@@ -59,6 +72,17 @@ export function DashboardPage({ activeIncidentId, onNavigate, artifactsStatus }:
             <Button variant="outline" onClick={() => onNavigate("artifacts")}>
               Go to Artifacts
             </Button>
+          </div>
+          <div className="grid gap-1">
+            <p className="font-medium">Demo Step Status</p>
+            <ol className="grid gap-1 text-xs">
+              {demoSteps.map((s) => (
+                <li key={s.name}>
+                  {s.name}: {s.status}
+                  {s.detail ? ` (${s.detail})` : ""}
+                </li>
+              ))}
+            </ol>
           </div>
           <div className="grid gap-2">
             <p className="font-medium">Artifact Status</p>
