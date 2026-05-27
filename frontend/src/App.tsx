@@ -59,10 +59,28 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    const timer = window.setInterval(() => {
+      getSourceHealth()
+        .then((x) => setSourceHealth(x.sources))
+        .catch(() => {})
+    }, 15000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
     getArtifactsStatus()
       .then((x) => setArtifactsStatus(x))
       .catch(() => setArtifactsStatus(null))
   }, [section, lastAnalyze])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      getArtifactsStatus()
+        .then((x) => setArtifactsStatus(x))
+        .catch(() => {})
+    }, 10000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   function navigateTo(next: Section) {
     setSection(next)
