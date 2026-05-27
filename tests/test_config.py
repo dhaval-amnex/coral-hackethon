@@ -1,5 +1,3 @@
-import os
-
 from incident_captain.config import validate_source_env
 
 
@@ -20,4 +18,3 @@ def test_validate_source_env_ok(monkeypatch) -> None:
     result = validate_source_env(["github", "slack"])
     assert result.ok is True
     assert result.missing == {}
-

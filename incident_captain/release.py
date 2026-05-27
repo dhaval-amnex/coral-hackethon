@@ -20,21 +20,6 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def build_release_check(root: Path) -> dict[str, Any]:
-    output_dir = root / "output"
-    report_dir = output_dir / "report"
-
-    progress = build_progress_report(root)
-    readiness = build_live_readiness_report(root)
-
-    demo_report = _read_json(report_dir / "demo_report.json")
-    impact_report = _read_json(report_dir / "impact_report.json")
-    quality_gate = _read_json(report_dir / "quality_gate.json")
-    scorecard = build_scorecard(
-        demo_report=demo_report,
-        impact_report=impact_report,
-        quality_gate=quality_gate,
-    )
-
     return _build_release_check_with_thresholds(
         root=root,
         min_progress_percent=90.0,
