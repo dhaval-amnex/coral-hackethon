@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .config import validate_source_env
 from .coral import find_coral_bin
 
 
@@ -45,5 +46,9 @@ def build_doctor_report(root: Path) -> dict[str, Any]:
         "has_quality_gate": (report_dir / "quality_gate.json").exists(),
         "has_scorecard": (report_dir / "scorecard.json").exists(),
     }
+    sources_to_validate = configured_sources or ["pagerduty", "github", "slack", "datadog"]
+    env_validation = validate_source_env(sources_to_validate)
+    checks["env_validation_ok"] = env_validation.ok
+    checks["env_missing"] = env_validation.missing
     return checks
 

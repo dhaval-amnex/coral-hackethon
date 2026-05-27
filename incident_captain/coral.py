@@ -12,7 +12,24 @@ from typing import Any
 
 
 class CoralError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, category: str = "unknown") -> None:
+        super().__init__(message)
+        self.category = category
+
+
+def classify_coral_error(message: str) -> str:
+    msg = message.lower()
+    if any(x in msg for x in ["not found", "no such file", "cannot find the file"]):
+        return "not_found"
+    if any(x in msg for x in ["unauthorized", "forbidden", "permission denied", "invalid token", "authentication"]):
+        return "auth"
+    if any(x in msg for x in ["rate limit", "too many requests", "429"]):
+        return "rate_limit"
+    if any(x in msg for x in ["timeout", "timed out", "connection reset", "network", "dns"]):
+        return "network"
+    if any(x in msg for x in ["unknown column", "unknown table", "schema", "parse error", "syntax error"]):
+        return "schema"
+    return "cli"
 
 
 def find_coral_bin() -> str:
@@ -77,17 +94,18 @@ class CoralClient:
                 check=False,
             )
         except FileNotFoundError as exc:
-            raise CoralError(self._not_found_message()) from exc
+            raise CoralError(self._not_found_message(), category="not_found") from exc
         duration_ms = int((time.perf_counter() - started) * 1000)
         if proc.returncode != 0:
-            raise CoralError(proc.stderr.strip() or proc.stdout.strip() or "coral sql failed")
+            msg = proc.stderr.strip() or proc.stdout.strip() or "coral sql failed"
+            raise CoralError(msg, category=classify_coral_error(msg))
         stdout = proc.stdout.strip()
         if not stdout:
             return [], duration_ms
         try:
             return json.loads(stdout), duration_ms
         except json.JSONDecodeError as exc:
-            raise CoralError(f"invalid JSON from coral sql: {exc}") from exc
+            raise CoralError(f"invalid JSON from coral sql: {exc}", category="schema") from exc
 
     def source_health(self, sources: list[str]) -> dict[str, str]:
         result: dict[str, str] = {}
@@ -100,7 +118,7 @@ class CoralClient:
                     check=False,
                 )
             except FileNotFoundError as exc:
-                raise CoralError(self._not_found_message()) from exc
+                raise CoralError(self._not_found_message(), category="not_found") from exc
             result[src] = "ok" if proc.returncode == 0 else "failed"
         return result
 
@@ -120,7 +138,7 @@ class CoralClient:
                 check=False,
             )
         except FileNotFoundError as exc:
-            raise CoralError(self._not_found_message()) from exc
+            raise CoralError(self._not_found_message(), category="not_found") from exc
         if proc.returncode == 0:
             return True, (proc.stdout.strip() or "ok")
         return False, (proc.stderr.strip() or proc.stdout.strip() or f"coral source add {name} failed")
@@ -135,7 +153,7 @@ class CoralClient:
                 check=False,
             )
         except FileNotFoundError as exc:
-            raise CoralError(self._not_found_message()) from exc
+            raise CoralError(self._not_found_message(), category="not_found") from exc
         lines = proc.stdout.strip().splitlines()
         names: list[str] = []
         for line in lines[1:]:  # skip header row

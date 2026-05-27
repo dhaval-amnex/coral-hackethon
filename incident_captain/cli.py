@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .batch import write_batch_summary
 from .bundling import create_submission_bundle
+from .config import validate_source_env
 from .coral import CoralClient, CoralError, find_coral_bin, load_env_file
 from .dashboard import write_dashboard
 from .doctor import build_doctor_report
@@ -307,8 +308,25 @@ def _load_env(args: argparse.Namespace) -> None:
         load_env_file(Path(env_file))
 
 
+def _validate_required_env(sources: list[str]) -> None:
+    result = validate_source_env(sources)
+    if result.ok:
+        return
+    pieces: list[str] = []
+    for source, vars_ in result.missing.items():
+        pieces.append(f"{source}: {', '.join(vars_)}")
+    raise CoralError(
+        "Missing required environment variables for configured sources. "
+        + "; ".join(pieces),
+        category="config",
+    )
+
+
 def cmd_analyze(args: argparse.Namespace) -> int:
     _load_env(args)
+    _validate_required_env(["pagerduty", "datadog", "slack"])
+    if getattr(args, "github_owner", "") and getattr(args, "github_repo", ""):
+        _validate_required_env(["github"])
     coral = CoralClient(coral_bin=args.coral_bin)
     sql_dir = Path(args.sql_dir)
     output_dir = Path(args.output_dir)
@@ -360,6 +378,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
 
 def cmd_health(args: argparse.Namespace) -> int:
     _load_env(args)
+    _validate_required_env(args.sources)
     coral = CoralClient(coral_bin=args.coral_bin)
     status = coral.source_health(args.sources)
     print(json.dumps(status, indent=2))
@@ -368,6 +387,7 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 def cmd_snapshot_catalog(args: argparse.Namespace) -> int:
     _load_env(args)
+    _validate_required_env(["pagerduty", "github", "slack", "datadog"])
     coral = CoralClient(coral_bin=args.coral_bin)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -906,6 +926,7 @@ def cmd_live_playbook(args: argparse.Namespace) -> int:
 
 def cmd_setup_sources(args: argparse.Namespace) -> int:
     _load_env(args)
+    _validate_required_env(args.sources)
     coral = CoralClient(coral_bin=args.coral_bin)
     results: dict[str, str] = {}
     for source in args.sources:
@@ -933,6 +954,7 @@ def cmd_setup_sources(args: argparse.Namespace) -> int:
 
 def cmd_snapshot_schema(args: argparse.Namespace) -> int:
     _load_env(args)
+    _validate_required_env(["pagerduty", "github", "slack", "datadog"])
     coral = CoralClient(coral_bin=args.coral_bin)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1020,7 +1042,8 @@ def main() -> int:
         parser.error("unknown command")
         return 2
     except CoralError as exc:
-        print(f"Error: {exc}")
+        category = getattr(exc, "category", "unknown")
+        print(f"Error[{category}]: {exc}")
         return 1
 
 
