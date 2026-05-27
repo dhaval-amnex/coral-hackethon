@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
-import { analyzeIncident } from "@/lib/api"
+import { analyzeIncidentStart, getAnalyzeJobStatus } from "@/lib/api"
 import type { AnalyzeResponse } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,24 +20,50 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [result, setResult] = useState<AnalyzeResponse | null>(null)
+  const [jobId, setJobId] = useState("")
 
   async function runAnalysis() {
     setLoading(true)
     setError("")
     try {
-      const payload = await analyzeIncident({
+      const start = await analyzeIncidentStart({
         incident_id: incidentId.trim(),
         github_owner: owner.trim(),
         github_repo: repo.trim(),
       })
-      setResult(payload)
-      onAnalyzed(payload.incident_id, payload)
+      setJobId(start.job_id)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run analysis")
-    } finally {
-      setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!jobId) return
+    const timer = setInterval(async () => {
+      try {
+        const status = await getAnalyzeJobStatus(jobId)
+        if (status.status === "done" && status.result) {
+          setResult(status.result)
+          onAnalyzed(status.result.incident_id, status.result)
+          setLoading(false)
+          setJobId("")
+          clearInterval(timer)
+        }
+        if (status.status === "failed") {
+          setError(status.error || "Analysis failed")
+          setLoading(false)
+          setJobId("")
+          clearInterval(timer)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to poll analysis job")
+        setLoading(false)
+        setJobId("")
+        clearInterval(timer)
+      }
+    }, 1200)
+    return () => clearInterval(timer)
+  }, [jobId, onAnalyzed])
 
   return (
     <div className="grid gap-4">

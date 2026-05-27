@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
+import uuid
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +22,7 @@ from .scorecard import write_scorecard
 from .readiness import write_live_readiness_report
 from .dashboard import write_dashboard
 from .handoff import write_handoff_note
+from .judge_pack import create_judge_pack
 
 
 def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict[str, Any]) -> None:
@@ -68,6 +71,10 @@ def _build_coral(payload: dict[str, Any]) -> CoralClient:
         retries=int(payload.get("coral_retries") or 2),
         backoff_sec=float(payload.get("coral_backoff_sec") or 0.5),
     )
+
+
+_JOBS_LOCK = threading.Lock()
+_JOBS: dict[str, dict[str, Any]] = {}
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -141,6 +148,19 @@ class _Handler(BaseHTTPRequestHandler):
             _json_response(self, HTTPStatus.OK, {"rows": _read_jsonl(metrics_log)})
             return
 
+        if path == "/api/analyze/status":
+            job_id = (qs.get("job_id", [""])[0] or "").strip()
+            if not job_id:
+                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": "job_id is required"})
+                return
+            with _JOBS_LOCK:
+                job = _JOBS.get(job_id)
+            if not job:
+                _json_response(self, HTTPStatus.NOT_FOUND, {"error": "job not found"})
+                return
+            _json_response(self, HTTPStatus.OK, job)
+            return
+
         _json_response(self, HTTPStatus.NOT_FOUND, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
@@ -159,8 +179,14 @@ class _Handler(BaseHTTPRequestHandler):
             if parsed.path == "/api/analyze":
                 self._post_analyze(payload)
                 return
+            if parsed.path == "/api/analyze/start":
+                self._post_analyze_start(payload)
+                return
             if parsed.path == "/api/ship-readiness":
                 self._post_ship_readiness(payload)
+                return
+            if parsed.path == "/api/judge-pack":
+                self._post_judge_pack(payload)
                 return
             _json_response(self, HTTPStatus.NOT_FOUND, {"error": "not found"})
         except CoralError as exc:
@@ -235,6 +261,70 @@ class _Handler(BaseHTTPRequestHandler):
             },
         )
 
+    def _post_analyze_start(self, payload: dict[str, Any]) -> None:
+        job_id = str(uuid.uuid4())
+        with _JOBS_LOCK:
+            _JOBS[job_id] = {"job_id": job_id, "status": "running", "result": None, "error": ""}
+
+        def _runner() -> None:
+            try:
+                env_file = Path(str(payload.get("env_file") or ".env"))
+                if env_file:
+                    load_env_file(env_file)
+                validate_sources = ["pagerduty", "datadog", "slack"]
+                github_owner = str(payload.get("github_owner") or "")
+                github_repo = str(payload.get("github_repo") or "")
+                if github_owner and github_repo:
+                    validate_sources.append("github")
+                v = validate_source_env(validate_sources)
+                if not v.ok:
+                    parts = [f"{src}: {', '.join(vals)}" for src, vals in v.missing.items()]
+                    raise CoralError("Missing required environment variables. " + "; ".join(parts), category="config")
+                incident_id = str(payload.get("incident_id") or "").strip()
+                if not incident_id:
+                    raise CoralError("incident_id is required", category="config")
+                output_dir = Path(str(payload.get("output_dir") or "output"))
+                output_dir.mkdir(parents=True, exist_ok=True)
+                metrics_log = Path(str(payload.get("metrics_log") or "output/run_metrics.jsonl"))
+                workflow_log = Path(str(payload.get("workflow_log") or "output/workflow_log.json"))
+                sql_dir = Path(str(payload.get("sql_dir") or "deliverables/sql"))
+                extra_vars: dict[str, str] = {}
+                if github_owner:
+                    extra_vars["GITHUB_OWNER"] = github_owner
+                if github_repo:
+                    extra_vars["GITHUB_REPO"] = github_repo
+                coral = _build_coral(payload)
+                workflow = run_deterministic_workflow(
+                    coral=coral,
+                    incident_id=incident_id,
+                    sql_dir=sql_dir,
+                    extra_vars=extra_vars or None,
+                )
+                brief = workflow.brief
+                (output_dir / f"{incident_id}.json").write_text(json.dumps(brief.to_dict(), indent=2), encoding="utf-8")
+                write_workflow_log(workflow_log, workflow.workflow_log)
+                append_run_metrics(
+                    metrics_log,
+                    incident_id=incident_id,
+                    mode="live",
+                    total_duration_ms=workflow.total_duration_ms,
+                    brief=brief,
+                )
+                result = {
+                    "incident_id": incident_id,
+                    "brief": brief.to_dict(),
+                    "workflow_log": workflow.workflow_log,
+                    "total_duration_ms": workflow.total_duration_ms,
+                }
+                with _JOBS_LOCK:
+                    _JOBS[job_id] = {"job_id": job_id, "status": "done", "result": result, "error": ""}
+            except Exception as exc:
+                with _JOBS_LOCK:
+                    _JOBS[job_id] = {"job_id": job_id, "status": "failed", "result": None, "error": str(exc)}
+
+        threading.Thread(target=_runner, daemon=True).start()
+        _json_response(self, HTTPStatus.OK, {"job_id": job_id, "status": "running"})
+
     def _post_ship_readiness(self, payload: dict[str, Any]) -> None:
         report_dir = Path(str(payload.get("report_dir") or "output/report"))
         output_dir = Path(str(payload.get("output_dir") or "output"))
@@ -299,6 +389,21 @@ class _Handler(BaseHTTPRequestHandler):
                 "handoff_summary": handoff,
             },
         )
+
+    def _post_judge_pack(self, payload: dict[str, Any]) -> None:
+        bundle_root = Path(str(payload.get("bundle_root") or "output/bundles"))
+        output_zip = Path(str(payload.get("output_zip") or "output/judge_pack.zip"))
+        source_dir = str(payload.get("source_dir") or "").strip()
+        if source_dir:
+            src = Path(source_dir)
+        else:
+            dirs = [p for p in bundle_root.glob("submission_bundle_*") if p.is_dir()]
+            if not dirs:
+                raise CoralError("no submission bundle directory found", category="config")
+            dirs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            src = dirs[0]
+        out = create_judge_pack(src, output_zip)
+        _json_response(self, HTTPStatus.OK, {"source_dir": str(src), "output_zip": str(out)})
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8787) -> None:

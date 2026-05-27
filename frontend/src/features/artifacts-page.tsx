@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { runShipReadiness } from "@/lib/api"
+import { generateJudgePack, runShipReadiness } from "@/lib/api"
 import type { ShipReadinessResponse } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ export function ArtifactsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [result, setResult] = useState<ShipReadinessResponse | null>(null)
+  const [judgePackPath, setJudgePackPath] = useState("")
 
   async function generate() {
     setLoading(true)
@@ -24,6 +25,19 @@ export function ArtifactsPage() {
       setResult(payload)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run ship-readiness")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function generatePack() {
+    setLoading(true)
+    setError("")
+    try {
+      const payload = await generateJudgePack()
+      setJudgePackPath(payload.output_zip)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate judge pack")
     } finally {
       setLoading(false)
     }
@@ -53,6 +67,17 @@ export function ArtifactsPage() {
           {error && <p className="text-sm text-destructive md:col-span-2">{error}</p>}
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Judge Pack</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          <Button variant="outline" onClick={generatePack} disabled={loading}>
+            {loading ? "Generating..." : "Generate judge_pack.zip"}
+          </Button>
+          {judgePackPath ? <p className="text-sm">Generated: {judgePackPath}</p> : null}
+        </CardContent>
+      </Card>
       {result && (
         <Card>
           <CardHeader>
@@ -69,4 +94,3 @@ export function ArtifactsPage() {
     </div>
   )
 }
-

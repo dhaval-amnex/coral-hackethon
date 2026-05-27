@@ -1,6 +1,9 @@
 import type {
   AnalyzeResponse,
+  AnalyzeJobStartResponse,
+  AnalyzeJobStatusResponse,
   EvidenceResponse,
+  JudgePackResponse,
   ReadinessResponse,
   RunHistoryRow,
   ShipReadinessResponse,
@@ -38,6 +41,29 @@ export function analyzeIncident(input: {
     method: "POST",
     body: JSON.stringify(input),
   })
+}
+
+export function analyzeIncidentStart(input: {
+  incident_id: string
+  github_owner?: string
+  github_repo?: string
+  env_file?: string
+  output_dir?: string
+  metrics_log?: string
+  workflow_log?: string
+  coral_timeout_sec?: number
+  coral_retries?: number
+  coral_backoff_sec?: number
+}): Promise<AnalyzeJobStartResponse> {
+  return request<AnalyzeJobStartResponse>("/api/analyze/start", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export function getAnalyzeJobStatus(jobId: string): Promise<AnalyzeJobStatusResponse> {
+  const q = new URLSearchParams({ job_id: jobId })
+  return request<AnalyzeJobStatusResponse>(`/api/analyze/status?${q.toString()}`)
 }
 
 export function getEvidence(incidentId: string, outputDir = "output"): Promise<EvidenceResponse> {
@@ -81,4 +107,15 @@ export function getSourceHealth(
     env_file: envFile,
   })
   return request<SourceHealthResponse>(`/api/source-health?${q.toString()}`)
+}
+
+export function generateJudgePack(input?: {
+  bundle_root?: string
+  output_zip?: string
+  source_dir?: string
+}): Promise<JudgePackResponse> {
+  return request<JudgePackResponse>("/api/judge-pack", {
+    method: "POST",
+    body: JSON.stringify(input ?? {}),
+  })
 }

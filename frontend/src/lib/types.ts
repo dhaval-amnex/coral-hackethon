@@ -26,6 +26,18 @@ export interface AnalyzeResponse {
   total_duration_ms: number
 }
 
+export interface AnalyzeJobStartResponse {
+  job_id: string
+  status: "running" | "done" | "failed"
+}
+
+export interface AnalyzeJobStatusResponse {
+  job_id: string
+  status: "running" | "done" | "failed"
+  result: AnalyzeResponse | null
+  error: string
+}
+
 export interface SourceHealthResponse {
   sources: Record<string, string>
   env_missing: Record<string, string[]>
@@ -74,4 +86,9 @@ export interface RunHistoryRow {
   evidence_count?: number
   query_errors?: number
   [k: string]: unknown
+}
+
+export interface JudgePackResponse {
+  source_dir: string
+  output_zip: string
 }
