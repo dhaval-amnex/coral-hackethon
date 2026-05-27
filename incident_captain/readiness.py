@@ -76,7 +76,7 @@ def build_live_readiness_report(root: Path) -> dict[str, Any]:
         },
         "expected_next_actions": [
             "run snapshot-catalog with live Coral access",
-            "run analyze/demo-run without --mock-data-dir",
+            "run analyze/demo-run with live source credentials",
             "regenerate quality-gate, scorecard, and submission bundle",
         ],
     }
@@ -105,4 +105,3 @@ def write_live_readiness_report(root: Path, out_json: Path, out_md: Path) -> dic
         lines.append("- none")
     out_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return report
-

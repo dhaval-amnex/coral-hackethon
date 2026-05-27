@@ -23,7 +23,6 @@ def run_deterministic_workflow(
     coral: CoralClient,
     incident_id: str,
     sql_dir: Path,
-    mock_data_dir: Path | None = None,
     extra_vars: dict[str, str] | None = None,
 ) -> WorkflowResult:
     started = time.perf_counter()
@@ -35,7 +34,7 @@ def run_deterministic_workflow(
             "step": "discover_catalog",
             "status": "ok",
             "detail": {
-                "mode": "mock" if mock_data_dir else "live",
+                "mode": "live",
                 "planned_queries": [name for name, _ in QUERY_FILES],
             },
             "duration_ms": int((time.perf_counter() - step_start) * 1000),
@@ -47,7 +46,6 @@ def run_deterministic_workflow(
         coral=coral,
         sql_dir=sql_dir,
         incident_id=incident_id,
-        mock_data_dir=mock_data_dir,
         extra_vars=extra_vars,
     )
     workflow_log.append(

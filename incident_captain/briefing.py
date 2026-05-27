@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import json
 from typing import Any
 
 from .coral import CoralClient, CoralError, QueryRun, render_sql_from_template
@@ -26,28 +25,12 @@ def run_incident_queries(
     coral: CoralClient,
     sql_dir: Path,
     incident_id: str,
-    mock_data_dir: Path | None = None,
     extra_vars: dict[str, str] | None = None,
 ) -> tuple[list[QueryRun], list[str]]:
     template_vars: dict[str, str] = {"INCIDENT_ID": incident_id, **(extra_vars or {})}
     runs: list[QueryRun] = []
     errors: list[str] = []
     for name, file_name in QUERY_FILES:
-        if mock_data_dir is not None:
-            mock_file = mock_data_dir / f"{name}.json"
-            if not mock_file.exists():
-                errors.append(f"missing mock data: {mock_file}")
-                continue
-            try:
-                rows = json.loads(mock_file.read_text(encoding="utf-8"))
-                if not isinstance(rows, list):
-                    errors.append(f"invalid mock data format: {mock_file}")
-                    continue
-                runs.append(QueryRun(name=name, rows=rows, duration_ms=1))
-            except json.JSONDecodeError as exc:
-                errors.append(f"invalid mock JSON {mock_file}: {exc}")
-            continue
-
         # Skip queries whose required vars are missing or empty.
         required = QUERY_REQUIRED_VARS.get(name, [])
         missing = [v for v in required if not template_vars.get(v)]

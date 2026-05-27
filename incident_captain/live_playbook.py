@@ -31,7 +31,7 @@ def build_live_playbook(report_dir: Path) -> dict[str, Any]:
         [
             "Verify files: python -m incident_captain.cli evidence-verify --tables-file <...> --columns-file <...> --filters-file <...> --live-metrics-file <...> --output-file output/report/evidence_verify.json",
             "Import files: python -m incident_captain.cli import-live-evidence --tables-file <...> --columns-file <...> --filters-file <...> --live-metrics-file <...> --output-root output",
-            "Run close loop: python -m incident_captain.cli close-live-loop --incident-id INC-1001 --tables-file <...> --columns-file <...> --filters-file <...> --live-metrics-file <...> --output-root output --report-dir output/report --bundle-root output/bundles --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json",
+            "Run close loop: python -m incident_captain.cli close-live-loop --incident-id <INCIDENT_ID> --tables-file <...> --columns-file <...> --filters-file <...> --live-metrics-file <...> --output-root output --report-dir output/report --bundle-root output/bundles --workflow-log output/workflow_log.json --baseline-file output/baseline_times.json",
             "Create final zip: python -m incident_captain.cli judge-pack --bundle-root output/bundles --output-zip output/judge_pack.zip",
         ]
     )
@@ -49,4 +49,3 @@ def write_live_playbook(report_dir: Path, output_file: Path) -> dict[str, Any]:
     lines.extend([f"- {s}" for s in payload["steps"]])
     output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return payload
-
