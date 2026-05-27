@@ -57,11 +57,13 @@ def _build_release_check_with_thresholds(
     demo_report = _read_json(report_dir / "demo_report.json")
     impact_report = _read_json(report_dir / "impact_report.json")
     quality_gate = _read_json(report_dir / "quality_gate.json")
-    scorecard = build_scorecard(
-        demo_report=demo_report,
-        impact_report=impact_report,
-        quality_gate=quality_gate,
-    )
+    scorecard = _read_json(report_dir / "scorecard.json")
+    if "overall_score" not in scorecard:
+        scorecard = build_scorecard(
+            demo_report=demo_report,
+            impact_report=impact_report,
+            quality_gate=quality_gate,
+        )
 
     go_for_submission = (
         progress["progress_percent"] >= min_progress_percent

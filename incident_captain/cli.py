@@ -45,11 +45,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory containing SQL templates.",
     )
     common.add_argument(
-        "--mock-data-dir",
-        default="",
-        help="Optional directory containing mock JSON files per query name.",
-    )
-    common.add_argument(
         "--env-file",
         default=".env",
         help="Path to .env file with API credentials (loaded before live queries).",
@@ -109,6 +104,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="output/report",
         help="Directory for generated report files.",
     )
+    report.add_argument(
+        "--recent-runs",
+        type=int,
+        default=0,
+        help="Use only the most recent N runs from metrics log (0 = all).",
+    )
 
     bundle = sub.add_parser("submission-bundle", help="Create a judge-ready artifact bundle.")
     bundle.add_argument("--incident-id", required=True, help="Incident identifier to bundle.")
@@ -117,7 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
     bundle.add_argument("--bundle-root", default="output/bundles", help="Destination root for bundle folders.")
 
     impact = sub.add_parser("impact-report", help="Generate time-saved impact report.")
-    impact.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline JSON file.")
+    impact.add_argument("--baseline-file", default="output/baseline_times.json", help="Baseline JSON file.")
     impact.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Run metrics JSONL file.")
     impact.add_argument("--output-dir", default="output/report", help="Directory for impact report output.")
 
@@ -140,18 +141,20 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--bundle-root", default="output/bundles", help="Bundle destination root.")
     demo.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Metrics log path.")
     demo.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
-    demo.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+    demo.add_argument("--baseline-file", default="output/baseline_times.json", help="Baseline file.")
     demo.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     demo.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+    demo.add_argument("--recent-runs", type=int, default=0, help="Use only the most recent N runs (0 = all).")
     demo.add_argument("--github-owner", default="", help="GitHub org/user for deploy correlation.")
     demo.add_argument("--github-repo", default="", help="GitHub repo name for deploy correlation.")
 
     batch = sub.add_parser("batch-run", parents=[common], help="Run demo pipeline across multiple incidents.")
     batch.add_argument("--incident-ids", required=True, help="Comma-separated incident IDs.")
     batch.add_argument("--output-root", default="output/batch", help="Root output directory for batch runs.")
-    batch.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+    batch.add_argument("--baseline-file", default="output/baseline_times.json", help="Baseline file.")
     batch.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     batch.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+    batch.add_argument("--recent-runs", type=int, default=0, help="Use only the most recent N runs (0 = all).")
 
     scorecard = sub.add_parser("scorecard", help="Generate judge-facing scorecard from reports.")
     scorecard.add_argument("--report-dir", default="output/report", help="Directory containing demo and impact reports.")
@@ -184,9 +187,10 @@ def build_parser() -> argparse.ArgumentParser:
     finalize.add_argument("--bundle-root", default="output/bundles", help="Bundle destination root.")
     finalize.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Metrics log path.")
     finalize.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
-    finalize.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+    finalize.add_argument("--baseline-file", default="output/baseline_times.json", help="Baseline file.")
     finalize.add_argument("--min-success-rate", type=float, default=0.7, help="Quality gate threshold.")
     finalize.add_argument("--min-improvement-percent", type=float, default=10.0, help="Quality gate threshold.")
+    finalize.add_argument("--recent-runs", type=int, default=0, help="Use only the most recent N runs (0 = all).")
     finalize.add_argument("--github-owner", default="", help="GitHub org/user for deploy correlation.")
     finalize.add_argument("--github-repo", default="", help="GitHub repo name for deploy correlation.")
     finalize.add_argument("--min-progress-percent", type=float, default=90.0, help="Release-check minimum progress percent.")
@@ -233,7 +237,7 @@ def build_parser() -> argparse.ArgumentParser:
     close_cmd.add_argument("--report-dir", default="output/report", help="Directory for report artifacts.")
     close_cmd.add_argument("--bundle-root", default="output/bundles", help="Bundle destination root.")
     close_cmd.add_argument("--workflow-log", default="output/workflow_log.json", help="Workflow log path.")
-    close_cmd.add_argument("--baseline-file", default="deliverables/mock/baseline_times.json", help="Baseline file.")
+    close_cmd.add_argument("--baseline-file", default="output/baseline_times.json", help="Baseline file.")
 
     dash_cmd = sub.add_parser("status-dashboard", help="Generate one-page status dashboard from reports.")
     dash_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
@@ -247,6 +251,28 @@ def build_parser() -> argparse.ArgumentParser:
     handoff_cmd = sub.add_parser("handoff-note", help="Generate a concise handoff markdown from latest reports.")
     handoff_cmd.add_argument("--report-dir", default="output/report", help="Directory containing report artifacts.")
     handoff_cmd.add_argument("--output-file", default="output/report/handoff_note.md", help="Output markdown file.")
+
+    ship_cmd = sub.add_parser("ship-readiness", help="Run full release-readiness artifact pipeline in one command.")
+    ship_cmd.add_argument("--incident-id", required=True, help="Incident identifier.")
+    ship_cmd.add_argument("--root", default=".", help="Project root path.")
+    ship_cmd.add_argument("--output-dir", default="output", help="Output artifact directory.")
+    ship_cmd.add_argument("--report-dir", default="output/report", help="Report artifact directory.")
+    ship_cmd.add_argument("--metrics-log", default="output/run_metrics.jsonl", help="Path to JSONL metrics log.")
+    ship_cmd.add_argument("--recent-runs", type=int, default=0, help="Use only the most recent N runs (0 = all).")
+    ship_cmd.add_argument("--min-success-rate", type=float, default=0.7, help="Minimum demo success rate.")
+    ship_cmd.add_argument("--min-improvement-percent", type=float, default=10.0, help="Minimum time-saved improvement percent.")
+    ship_cmd.add_argument("--min-progress-percent", type=float, default=90.0, help="Minimum progress percent.")
+    ship_cmd.add_argument("--min-scorecard-overall", type=float, default=70.0, help="Minimum scorecard overall.")
+    ship_cmd.add_argument(
+        "--status-output-file",
+        default="output/report/status_dashboard.md",
+        help="Output file for status dashboard markdown.",
+    )
+    ship_cmd.add_argument(
+        "--handoff-output-file",
+        default="output/report/handoff_note.md",
+        help="Output file for handoff markdown.",
+    )
 
     audit_cmd = sub.add_parser("plan-audit", help="Audit current state against implementation phases.")
     audit_cmd.add_argument("--root", default=".", help="Project root path.")
@@ -282,11 +308,9 @@ def _load_env(args: argparse.Namespace) -> None:
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
-    if not getattr(args, "mock_data_dir", ""):
-        _load_env(args)
+    _load_env(args)
     coral = CoralClient(coral_bin=args.coral_bin)
     sql_dir = Path(args.sql_dir)
-    mock_data_dir = Path(args.mock_data_dir) if args.mock_data_dir else None
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -300,7 +324,6 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         coral=coral,
         incident_id=args.incident_id,
         sql_dir=sql_dir,
-        mock_data_dir=mock_data_dir,
         extra_vars=extra_vars or None,
     )
     brief = workflow.brief
@@ -313,7 +336,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     append_run_metrics(
         Path(args.metrics_log),
         incident_id=args.incident_id,
-        mode="mock" if mock_data_dir else "live",
+        mode="live",
         total_duration_ms=workflow.total_duration_ms,
         brief=brief,
     )
@@ -336,23 +359,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
 
 
 def cmd_health(args: argparse.Namespace) -> int:
-    if not args.mock_data_dir:
-        _load_env(args)
-    if args.mock_data_dir:
-        mock_data_dir = Path(args.mock_data_dir)
-        required = [
-            "active_incidents.json",
-            "deploy_correlation.json",
-            "telemetry_context.json",
-            "team_comms.json",
-            "final_dataset.json",
-        ]
-        status = {}
-        for file_name in required:
-            status[file_name] = "ok" if (mock_data_dir / file_name).exists() else "missing"
-        print(json.dumps(status, indent=2))
-        return 0 if all(v == "ok" for v in status.values()) else 1
-
+    _load_env(args)
     coral = CoralClient(coral_bin=args.coral_bin)
     status = coral.source_health(args.sources)
     print(json.dumps(status, indent=2))
@@ -387,7 +394,12 @@ def cmd_demo_report(args: argparse.Namespace) -> int:
     out_dir = Path(args.output_dir)
     out_json = out_dir / "demo_report.json"
     out_md = out_dir / "demo_report.md"
-    summary = write_demo_report(Path(args.metrics_log), out_json, out_md)
+    summary = write_demo_report(
+        Path(args.metrics_log),
+        out_json,
+        out_md,
+        recent_runs=max(0, int(getattr(args, "recent_runs", 0))),
+    )
     print(json.dumps(summary, indent=2))
     print(f"Wrote: {out_json}")
     print(f"Wrote: {out_md}")
@@ -445,7 +457,6 @@ def cmd_demo_run(args: argparse.Namespace) -> int:
     analyze_args = Obj()
     analyze_args.coral_bin = args.coral_bin
     analyze_args.sql_dir = args.sql_dir
-    analyze_args.mock_data_dir = args.mock_data_dir
     analyze_args.env_file = getattr(args, "env_file", ".env")
     analyze_args.command = "analyze"
     analyze_args.incident_id = args.incident_id
@@ -463,6 +474,7 @@ def cmd_demo_run(args: argparse.Namespace) -> int:
     report_args.command = "demo-report"
     report_args.metrics_log = args.metrics_log
     report_args.output_dir = args.report_dir
+    report_args.recent_runs = getattr(args, "recent_runs", 0)
     rc = cmd_demo_report(report_args)
     if rc != 0:
         return rc
@@ -521,11 +533,11 @@ def cmd_batch_run(args: argparse.Namespace) -> int:
         demo_args.metrics_log = str(metrics_log)
         demo_args.workflow_log = str(workflow_log)
         demo_args.baseline_file = args.baseline_file
-        demo_args.mock_data_dir = args.mock_data_dir
         demo_args.sql_dir = args.sql_dir
         demo_args.coral_bin = args.coral_bin
         demo_args.min_success_rate = args.min_success_rate
         demo_args.min_improvement_percent = args.min_improvement_percent
+        demo_args.recent_runs = getattr(args, "recent_runs", 0)
         rc = cmd_demo_run(demo_args)
         rows.append(
             {
@@ -611,11 +623,11 @@ def cmd_finalize(args: argparse.Namespace) -> int:
     demo_args.metrics_log = args.metrics_log
     demo_args.workflow_log = args.workflow_log
     demo_args.baseline_file = args.baseline_file
-    demo_args.mock_data_dir = args.mock_data_dir
     demo_args.sql_dir = args.sql_dir
     demo_args.coral_bin = args.coral_bin
     demo_args.min_success_rate = args.min_success_rate
     demo_args.min_improvement_percent = args.min_improvement_percent
+    demo_args.recent_runs = getattr(args, "recent_runs", 0)
     demo_args.github_owner = getattr(args, "github_owner", "")
     demo_args.github_repo = getattr(args, "github_repo", "")
     rc = cmd_demo_run(demo_args)
@@ -784,11 +796,11 @@ def cmd_close_live_loop(args: argparse.Namespace) -> int:
     finalize_args.metrics_log = str(Path(args.output_root) / "run_metrics.jsonl")
     finalize_args.workflow_log = args.workflow_log
     finalize_args.baseline_file = args.baseline_file
-    finalize_args.mock_data_dir = ""
     finalize_args.sql_dir = "deliverables/sql"
     finalize_args.coral_bin = "coral"
     finalize_args.min_success_rate = 0.7
     finalize_args.min_improvement_percent = 10.0
+    finalize_args.recent_runs = 0
     return cmd_finalize(finalize_args)
 
 
@@ -827,6 +839,52 @@ def cmd_handoff_note(args: argparse.Namespace) -> int:
     payload = write_handoff_note(Path(args.report_dir), Path(args.output_file))
     print(json.dumps({"written": args.output_file, "summary": payload}, indent=2))
     return 0
+
+
+def cmd_ship_readiness(args: argparse.Namespace) -> int:
+    class Obj:
+        pass
+
+    report_args = Obj()
+    report_args.metrics_log = args.metrics_log
+    report_args.output_dir = args.report_dir
+    report_args.recent_runs = args.recent_runs
+    rc = cmd_demo_report(report_args)
+    if rc != 0:
+        return rc
+
+    quality_args = Obj()
+    quality_args.incident_id = args.incident_id
+    quality_args.output_dir = args.output_dir
+    quality_args.report_dir = args.report_dir
+    quality_args.min_success_rate = args.min_success_rate
+    quality_args.min_improvement_percent = args.min_improvement_percent
+    _ = cmd_quality_gate(quality_args)
+
+    score_args = Obj()
+    score_args.report_dir = args.report_dir
+    score_args.quality_gate_file = str(Path(args.report_dir) / "quality_gate.json")
+    score_args.output_dir = args.report_dir
+    _ = cmd_scorecard(score_args)
+
+    release_args = Obj()
+    release_args.root = args.root
+    release_args.output_dir = args.report_dir
+    release_args.min_progress_percent = args.min_progress_percent
+    release_args.min_scorecard_overall = args.min_scorecard_overall
+    rc_release = cmd_release_check(release_args)
+
+    dash_args = Obj()
+    dash_args.report_dir = args.report_dir
+    dash_args.output_file = args.status_output_file
+    _ = cmd_status_dashboard(dash_args)
+
+    handoff_args = Obj()
+    handoff_args.report_dir = args.report_dir
+    handoff_args.output_file = args.handoff_output_file
+    _ = cmd_handoff_note(handoff_args)
+
+    return rc_release
 
 
 def cmd_plan_audit(args: argparse.Namespace) -> int:
@@ -949,6 +1007,8 @@ def main() -> int:
             return cmd_judge_pack(args)
         if args.command == "handoff-note":
             return cmd_handoff_note(args)
+        if args.command == "ship-readiness":
+            return cmd_ship_readiness(args)
         if args.command == "plan-audit":
             return cmd_plan_audit(args)
         if args.command == "live-playbook":

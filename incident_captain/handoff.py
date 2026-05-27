@@ -26,9 +26,9 @@ def write_handoff_note(report_dir: Path, output_file: Path) -> dict[str, Any]:
         "progress_percent": progress.get("progress_percent", "N/A"),
         "go_for_submission": release.get("go_for_submission", "N/A"),
         "go_for_live_submission": release.get("go_for_live_submission", "N/A"),
-        "scorecard_overall": scorecard.get("overall_score", "N/A"),
-        "live_blockers": readiness.get("blockers", []),
-        "next_actions": next_actions.get("actions", []),
+        "scorecard_overall": release.get("scorecard_overall", scorecard.get("overall_score", "N/A")),
+        "live_blockers": release.get("live_blockers", readiness.get("blockers", [])),
+        "next_actions": release.get("next_actions", next_actions.get("actions", [])),
     }
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -63,10 +63,9 @@ def write_handoff_note(report_dir: Path, output_file: Path) -> dict[str, Any]:
             "",
             "## Recommended Commands",
             "- `python -m incident_captain.cli live-unblock --root . --report-dir output/report`",
-            "- `python -m incident_captain.cli close-live-loop --incident-id INC-1001 --tables-file <...> --columns-file <...> --filters-file <...> --live-metrics-file <...> --output-root output --report-dir output/report --bundle-root output/bundles --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json`",
+            "- `python -m incident_captain.cli close-live-loop --incident-id <INCIDENT_ID> --tables-file <...> --columns-file <...> --filters-file <...> --live-metrics-file <...> --output-root output --report-dir output/report --bundle-root output/bundles --workflow-log output/workflow_log.json --baseline-file output/baseline_times.json`",
             "- `python -m incident_captain.cli judge-pack --bundle-root output/bundles --output-zip output/judge_pack.zip`",
         ]
     )
     output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return payload
-

@@ -57,8 +57,12 @@ def write_demo_report(
     metrics_path: Path,
     out_json: Path,
     out_md: Path,
+    *,
+    recent_runs: int = 0,
 ) -> dict[str, Any]:
     rows = load_metrics(metrics_path)
+    if recent_runs > 0:
+        rows = rows[-recent_runs:]
     summary = build_demo_summary(rows)
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_md.parent.mkdir(parents=True, exist_ok=True)
@@ -82,4 +86,3 @@ def write_demo_report(
     ]
     out_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return summary
-

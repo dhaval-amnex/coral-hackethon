@@ -2,32 +2,6 @@
 
 Incident Captain is a Track 1 Enterprise Agent project built on Coral. It correlates incidents across PagerDuty, GitHub, telemetry, and Slack to produce a structured root-cause briefing.
 
-## Submission Narrative
-- Problem:
-  Enterprise incident triage is fragmented across alerting, source control, observability, and team context tools. Engineers lose critical minutes stitching evidence manually while outages continue.
-- Sources used:
-  `pagerduty`, `github`, `datadog`, and `slack` (where token scope allows), all queried through Coral.
-- One-query cross-source value:
-  Incident Captain uses Coral SQL to correlate active incidents, recent deploy context, telemetry signals, and team communication metadata in one deterministic workflow instead of many disconnected tool calls.
-- Measurable impact:
-  Current benchmark artifacts report up to **67.74% triage-time improvement** with a reusable incident briefing output, quality gate, scorecard, and submission bundle.
-
-## What this includes
-- End-to-end execution plan in `plan/`
-- Submission assets and templates in `deliverables/`
-- Runnable CLI in `incident_captain/`
-- SQL workflow templates in `deliverables/sql/`
-- Tests in `tests/`
-
-## Prerequisites
-- Python 3.10+
-- Coral installed and available on PATH
-- Configured Coral sources (recommended):
-  - `pagerduty`
-  - `github`
-  - `slack`
-  - `datadog` (or `openobserve` by adapting SQL template names)
-
 ## Setup
 ```bash
 python -m venv .venv
@@ -36,168 +10,34 @@ pip install -e .
 pip install pytest
 ```
 
-## Validate sources
+## Configure
 ```bash
-incident-captain health --sources pagerduty github slack datadog
+python -m incident_captain.cli setup-sources --env-file .env
+python -m incident_captain.cli health --env-file .env
 ```
 
-If your machine cannot run Coral source commands, use offline mock mode:
+## Run
 ```bash
-python -m incident_captain.cli health --mock-data-dir deliverables/mock
+python -m incident_captain.cli analyze --incident-id <INCIDENT_ID> --env-file .env --github-owner <OWNER> --github-repo <REPO>
+python -m incident_captain.cli demo-run --incident-id <INCIDENT_ID> --env-file .env --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file output/baseline_times.json --github-owner <OWNER> --github-repo <REPO>
 ```
 
-## Run analysis
-```bash
-incident-captain analyze --incident-id INC-1234
-```
-
-Offline mock run:
-```bash
-python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock
-```
-
-Executive-view console output for demos:
-```bash
-python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --view executive
-```
-
-Capture run metrics:
-```bash
-python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --metrics-log output/run_metrics.jsonl
-```
-
-Capture deterministic workflow trace:
-```bash
-python -m incident_captain.cli analyze --incident-id INC-1001 --mock-data-dir deliverables/mock --workflow-log output/workflow_log.json
-```
-
-Catalog snapshot (when Coral access is available):
-```bash
-python -m incident_captain.cli snapshot-catalog --output-dir output/catalog
-```
-
-Generate demo report from run metrics:
-```bash
-python -m incident_captain.cli demo-report --metrics-log output/run_metrics.jsonl --output-dir output/report
-```
-
-Create final submission bundle:
-```bash
-python -m incident_captain.cli submission-bundle --incident-id INC-1001 --output-dir output --report-dir output/report --bundle-root output/bundles
-```
-
-Generate impact report (time saved):
-```bash
-python -m incident_captain.cli impact-report --baseline-file deliverables/mock/baseline_times.json --metrics-log output/run_metrics.jsonl --output-dir output/report
-```
-
-Run final quality gate:
-```bash
-python -m incident_captain.cli quality-gate --incident-id INC-1001 --output-dir output --report-dir output/report --min-success-rate 0.7 --min-improvement-percent 10
-```
-
-Generate judge scorecard:
+## Release Artifacts
 ```bash
 python -m incident_captain.cli scorecard --report-dir output/report --quality-gate-file output/report/quality_gate.json --output-dir output/report
-```
-
-Check live submission readiness:
-```bash
-python -m incident_captain.cli live-readiness --root . --output-dir output/report
-```
-
-Run final go/no-go release check:
-```bash
 python -m incident_captain.cli release-check --root . --output-dir output/report --min-progress-percent 90 --min-scorecard-overall 70
-```
-
-Run full finalization pipeline:
-```bash
-python -m incident_captain.cli finalize --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
-```
-
-Generate prioritized pending checklist:
-```bash
-python -m incident_captain.cli next-actions --report-dir output/report --output-dir output/report
-```
-
-Import live evidence from unrestricted machine:
-```bash
-python -m incident_captain.cli import-live-evidence --tables-file <path\\catalog_tables.json> --columns-file <path\\catalog_columns.json> --filters-file <path\\catalog_filters.json> --live-metrics-file <path\\run_metrics_live.jsonl> --output-root output
-```
-
-Verify imported live evidence before import:
-```bash
-python -m incident_captain.cli evidence-verify --tables-file <path\\catalog_tables.json> --columns-file <path\\catalog_columns.json> --filters-file <path\\catalog_filters.json> --live-metrics-file <path\\run_metrics_live.jsonl> --output-file output/report/evidence_verify.json
-```
-
-Generate external evidence collection kit:
-```bash
-python -m incident_captain.cli external-kit --output-dir output/external_kit
-```
-
-Run post-import live unblock checks:
-```bash
-python -m incident_captain.cli live-unblock --root . --report-dir output/report
-```
-
-Run end-to-end live close loop:
-```bash
-python -m incident_captain.cli close-live-loop --incident-id INC-1001 --tables-file <path\\catalog_tables.json> --columns-file <path\\catalog_columns.json> --filters-file <path\\catalog_filters.json> --live-metrics-file <path\\run_metrics_live.jsonl> --output-root output --report-dir output/report --bundle-root output/bundles --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
-```
-
-Run environment diagnostics:
-```bash
-python -m incident_captain.cli doctor --root .
-```
-
-Generate one-page status dashboard:
-```bash
-python -m incident_captain.cli status-dashboard --report-dir output/report --output-file output/report/status_dashboard.md
-```
-
-Create judge-ready ZIP pack:
-```bash
 python -m incident_captain.cli judge-pack --bundle-root output/bundles --output-zip output/judge_pack.zip
+python -m incident_captain.cli ship-readiness --incident-id <INCIDENT_ID> --root . --output-dir output --report-dir output/report --metrics-log output/run_metrics.jsonl --recent-runs 1 --min-progress-percent 90 --min-scorecard-overall 70
 ```
 
-Generate concise handoff note:
+## Evidence Import Flow
 ```bash
-python -m incident_captain.cli handoff-note --report-dir output/report --output-file output/report/handoff_note.md
+python -m incident_captain.cli evidence-verify --tables-file <PATH_TABLES_JSON> --columns-file <PATH_COLUMNS_JSON> --filters-file <PATH_FILTERS_JSON> --live-metrics-file <PATH_RUN_METRICS_JSONL> --output-file output/report/evidence_verify.json
+python -m incident_captain.cli import-live-evidence --tables-file <PATH_TABLES_JSON> --columns-file <PATH_COLUMNS_JSON> --filters-file <PATH_FILTERS_JSON> --live-metrics-file <PATH_RUN_METRICS_JSONL> --output-root output
+python -m incident_captain.cli close-live-loop --incident-id <INCIDENT_ID> --tables-file <PATH_TABLES_JSON> --columns-file <PATH_COLUMNS_JSON> --filters-file <PATH_FILTERS_JSON> --live-metrics-file <PATH_RUN_METRICS_JSONL> --output-root output --report-dir output/report --bundle-root output/bundles --workflow-log output/workflow_log.json --baseline-file output/baseline_times.json
 ```
 
-Audit plan vs current state:
+## Tests
 ```bash
-python -m incident_captain.cli plan-audit --root . --output-file output/report/plan_audit.json
-```
-
-Generate live unblock playbook:
-```bash
-python -m incident_captain.cli live-playbook --report-dir output/report --output-file output/report/live_playbook.md
-```
-
-One-command full demo pipeline:
-```bash
-python -m incident_captain.cli demo-run --incident-id INC-1001 --mock-data-dir deliverables/mock --output-dir output --report-dir output/report --bundle-root output/bundles --metrics-log output/run_metrics.jsonl --workflow-log output/workflow_log.json --baseline-file deliverables/mock/baseline_times.json
-```
-
-Batch run across multiple scenarios:
-```bash
-python -m incident_captain.cli batch-run --incident-ids INC-1001,INC-1002,INC-1003 --output-root output/batch --mock-data-dir deliverables/mock --baseline-file deliverables/mock/baseline_times.json
-```
-
-Outputs:
-- `output/INC-1234.json`
-- `output/INC-1234.md`
-
-## Test
-```bash
-pytest -q
-```
-
-## Next integration step
-Replace placeholder table/column names in `deliverables/sql/*.sql` with your live Coral catalog names from:
-```bash
-coral sql "SELECT schema_name, table_name FROM coral.tables ORDER BY 1,2"
-coral sql "SELECT schema_name, table_name, column_name FROM coral.columns ORDER BY 1,2,3"
+python -m pytest -q
 ```

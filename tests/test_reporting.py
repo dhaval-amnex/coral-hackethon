@@ -43,3 +43,24 @@ def test_write_demo_report(tmp_path: Path) -> None:
     assert out_json.exists()
     assert out_md.exists()
 
+
+def test_write_demo_report_recent_runs_window(tmp_path: Path) -> None:
+    metrics = tmp_path / "run_metrics.jsonl"
+    metrics.write_text(
+        "\n".join(
+            [
+                json.dumps({"incident_id": "INC-1", "total_duration_ms": 100, "confidence": "high", "evidence_count": 4, "query_errors": 0}),
+                json.dumps({"incident_id": "INC-2", "total_duration_ms": 200, "confidence": "medium", "evidence_count": 2, "query_errors": 1}),
+                json.dumps({"incident_id": "INC-3", "total_duration_ms": 300, "confidence": "high", "evidence_count": 3, "query_errors": 0}),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    out_json = tmp_path / "demo_report.json"
+    out_md = tmp_path / "demo_report.md"
+    summary = write_demo_report(metrics, out_json, out_md, recent_runs=2)
+
+    assert summary["total_runs"] == 2
+    assert summary["latest_incident_id"] == "INC-3"
+    assert summary["avg_duration_ms"] == 250.0
