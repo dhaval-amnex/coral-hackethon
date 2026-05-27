@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Incident Captain | Command Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#f8f9fa",
+                        "tertiary-fixed": "#d1e4ff",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#394e00",
+                        "secondary-container": "#dde0e5",
+                        "surface-variant": "#e1e3e4",
+                        "surface-container-low": "#f3f4f5",
+                        "surface-container": "#edeeef",
+                        "on-tertiary-fixed": "#001d35",
+                        "on-secondary-fixed-variant": "#43474c",
+                        "primary": "#4c6700",
+                        "on-secondary": "#ffffff",
+                        "background": "#f8f9fa",
+                        "inverse-primary": "#a3d800",
+                        "on-secondary-container": "#5f6368",
+                        "on-primary-fixed": "#151f00",
+                        "on-surface-variant": "#434933",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#5b5f63",
+                        "tertiary": "#0062a1",
+                        "primary-fixed-dim": "#a3d800",
+                        "surface-dim": "#d9dadb",
+                        "on-error": "#ffffff",
+                        "surface-tint": "#4c6700",
+                        "secondary-fixed-dim": "#c3c7cc",
+                        "on-surface": "#191c1d",
+                        "outline-variant": "#c3caac",
+                        "on-primary-container": "#567300",
+                        "on-primary": "#ffffff",
+                        "outline": "#737a61",
+                        "error": "#ba1a1a",
+                        "primary-container": "#c1ff00",
+                        "tertiary-container": "#dfecff",
+                        "surface-container-high": "#e7e8e9",
+                        "on-secondary-fixed": "#181c20",
+                        "on-tertiary-container": "#006db4",
+                        "surface": "#f8f9fa",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#e0e3e8",
+                        "on-tertiary-fixed-variant": "#00497b",
+                        "error-container": "#ffdad6",
+                        "inverse-on-surface": "#f0f1f2",
+                        "tertiary-fixed-dim": "#9dcaff",
+                        "inverse-surface": "#2e3132",
+                        "primary-fixed": "#baf600",
+                        "on-background": "#191c1d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "xxl": "24px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-page": "32px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "card-padding": "24px",
+                        "stack-sm": "12px",
+                        "stack-md": "20px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "metadata": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "metadata": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-md-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["15px", {"lineHeight": "22px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8F9FA; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .level-1-card {
+            background: #FFFFFF;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 40px 60px -15px rgba(0,0,0,0.03);
+            border-radius: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .level-1-card:hover {
+            box-shadow: 0 50px 70px -15px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+        .neon-accent { border-left: 4px solid #c1ff00; }
+        .ai-glow { box-shadow: inset 0 0 12px rgba(193, 255, 0, 0.1), 0 40px 60px -15px rgba(0,0,0,0.03); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e1e3e4; border-radius: 10px; }
+    </style>
+</head>
+<body class="text-on-surface antialiased overflow-x-hidden">
+<!-- Sidebar Navigation Shell -->
+<aside class="fixed left-6 top-6 bottom-6 w-20 bg-surface-container-lowest border border-outline-variant/20 rounded-xxl shadow-xl z-50 flex flex-col items-center py-8 justify-between">
+<div class="flex flex-col items-center gap-10">
+<div class="w-12 h-12 bg-primary-container rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">terminal</span>
+</div>
+<nav class="flex flex-col gap-8">
+<a class="group relative flex flex-col items-center text-primary" href="#">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="absolute left-16 bg-inverse-surface text-inverse-on-surface px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Dashboard</span>
+</a>
+<a class="group relative flex flex-col items-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">troubleshoot</span>
+<span class="absolute left-16 bg-inverse-surface text-inverse-on-surface px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Analyze</span>
+</a>
+<a class="group relative flex flex-col items-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">shield</span>
+<span class="absolute left-16 bg-inverse-surface text-inverse-on-surface px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Evidence</span>
+</a>
+<a class="group relative flex flex-col items-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">query_stats</span>
+<span class="absolute left-16 bg-inverse-surface text-inverse-on-surface px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Readiness</span>
+</a>
+<a class="group relative flex flex-col items-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">inventory_2</span>
+<span class="absolute left-16 bg-inverse-surface text-inverse-on-surface px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Artifacts</span>
+</a>
+<a class="group relative flex flex-col items-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">history</span>
+<span class="absolute left-16 bg-inverse-surface text-inverse-on-surface px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Run History</span>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-6 items-center">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-surface-variant overflow-hidden border-2 border-primary-container">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVy7wlK8Uig9jPFklUA6-qzyAFY9tLBs2NBMGnC4HQg_8JyL5puKTWk3yf8Yy9HkxTO1yT-ZzEKfhw-g3AbNBMCIDX-iCf07z3ppcS25mFUfgQGkv1CVHcBzCsb1Tke6TnFkimzn69_pjifd6O9gsuyVGjurT46whcplX6gpOOFis4QY81erlPWzXouT8eO-5UC9NzdkVAeUKZpEgzAquLlwwj5EY024zNSZ13iMNLKx984OehYalmlq3-JwTMyhnnALAb-27-y9jc"/>
+</div>
+</div>
+</aside>
+<main class="ml-32 mr-margin-page py-10 min-h-screen">
+<!-- Top Command Bar -->
+<header class="flex items-center justify-between mb-10">
+<div class="flex items-center gap-6">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface leading-none mb-1">Incident Captain</h1>
+<p class="font-metadata text-metadata text-on-surface-variant uppercase tracking-widest">Fleet Command / IC-01</p>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/30"></div>
+<span class="bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                    LIVE ENVIRONMENT
+                </span>
+</div>
+<div class="flex items-center gap-gutter">
+<div class="hidden lg:flex items-center gap-4 bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-error">notification_important</span>
+<span class="text-metadata font-metadata">PagerDuty</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">check_circle</span>
+<span class="text-metadata font-metadata">GitHub</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">check_circle</span>
+<span class="text-metadata font-metadata">Datadog</span>
+</div>
+</div>
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container border-none rounded-full pl-12 pr-4 py-2.5 text-body-md font-body-md focus:ring-2 focus:ring-primary-container" placeholder="Jump to command..." type="text"/>
+</div>
+<button class="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container-highest/50 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<!-- Hero Area: Active Incident -->
+<section class="level-1-card ai-glow p-card-padding mb-gutter relative overflow-hidden">
+<div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary-container/10 to-transparent pointer-events-none"></div>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-gutter relative z-10">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-4">
+<span class="bg-error text-on-error px-3 py-1 rounded-full text-label-caps font-label-caps">CRITICAL</span>
+<span class="text-on-surface-variant font-metadata text-metadata">Reported 14m ago by Watchdog-AI</span>
+</div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-2">IC-294: API Gateway Latency Spike</h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-2xl mb-6">Internal microservices reporting high response times in US-EAST-1 cluster. Probable cause: Shared cache connection pool exhaustion.</p>
+<div class="flex items-center gap-6">
+<button class="bg-primary-container text-on-primary-fixed px-8 py-3.5 rounded-full font-label-caps text-label-caps flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-95">
+<span class="material-symbols-outlined">bolt</span>
+                            RUN ANALYSIS
+                        </button>
+<button class="border border-outline px-8 py-3.5 rounded-full font-label-caps text-label-caps hover:bg-surface-container-low transition-colors">
+                            ASSIGN LEAD
+                        </button>
+</div>
+</div>
+<div class="flex flex-col items-center md:items-end gap-2 text-right">
+<div class="relative w-32 h-32 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle cx="64" cy="64" fill="transparent" r="56" stroke="#F1F3F5" stroke-width="8"></circle>
+<circle cx="64" cy="64" fill="transparent" r="56" stroke="#c1ff00" stroke-dasharray="351.85" stroke-dashoffset="21" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-headline-lg font-headline-lg">94%</span>
+</div>
+</div>
+<p class="font-metadata text-metadata text-primary uppercase tracking-wider font-bold">Confidence Score</p>
+</div>
+</div>
+</section>
+<!-- KPI Grid & Telemetry -->
+<div class="bento-grid">
+<!-- MTTR Card -->
+<div class="level-1-card col-span-12 md:col-span-3 p-6 flex flex-col justify-between h-48">
+<div class="flex justify-between items-start">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Fleet MTTR</p>
+<span class="material-symbols-outlined text-primary text-[20px]">trending_down</span>
+</div>
+<div>
+<h3 class="text-display-lg font-display-lg text-on-surface">14<span class="text-headline-md font-headline-md ml-1">m</span></h3>
+<p class="text-metadata font-metadata text-primary">-4% from last week</p>
+</div>
+</div>
+<!-- Evidence Count Card -->
+<div class="level-1-card col-span-12 md:col-span-3 p-6 flex flex-col justify-between h-48">
+<div class="flex justify-between items-start">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Evidence Collected</p>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">more_horiz</span>
+</div>
+<div>
+<h3 class="text-display-lg font-display-lg text-on-surface">1,240</h3>
+<p class="text-metadata font-metadata text-on-surface-variant">Logs, Traces &amp; Dumps</p>
+</div>
+</div>
+<!-- Query Success Card -->
+<div class="level-1-card col-span-12 md:col-span-3 p-6 flex flex-col justify-between h-48">
+<div class="flex justify-between items-start">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Query Success</p>
+<div class="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
+</div>
+<div>
+<h3 class="text-display-lg font-display-lg text-on-surface">99.8<span class="text-headline-md font-headline-md ml-1">%</span></h3>
+<div class="w-full bg-surface-container h-1 rounded-full mt-2">
+<div class="bg-primary h-1 rounded-full" style="width: 99.8%"></div>
+</div>
+</div>
+</div>
+<!-- Readiness Score Card -->
+<div class="level-1-card col-span-12 md:col-span-3 p-6 flex flex-col justify-between h-48 bg-primary-container/10 border-primary/20">
+<div class="flex justify-between items-start">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Readiness</p>
+<span class="material-symbols-outlined text-on-primary-fixed">verified</span>
+</div>
+<div>
+<h3 class="text-display-lg font-display-lg text-on-surface">88<span class="text-headline-md font-headline-md ml-1">/100</span></h3>
+<p class="text-metadata font-metadata text-on-primary-fixed-variant">Operational Stability: High</p>
+</div>
+</div>
+<!-- Telemetry Graph Main Area -->
+<div class="level-1-card col-span-12 lg:col-span-8 p-card-padding">
+<div class="flex justify-between items-center mb-10">
+<div>
+<h4 class="font-headline-md text-headline-md">System Throughput</h4>
+<p class="text-metadata font-metadata text-on-surface-variant">Real-time telemetry from edge nodes</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1 rounded bg-surface-container font-label-caps text-label-caps">1H</button>
+<button class="px-3 py-1 rounded bg-primary-container text-on-primary-container font-label-caps text-label-caps">24H</button>
+<button class="px-3 py-1 rounded bg-surface-container font-label-caps text-label-caps">7D</button>
+</div>
+</div>
+<div class="relative h-64 w-full flex items-end justify-between gap-2 px-2">
+<!-- Simple CSS Bar Graph -->
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 60%"></div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 45%"></div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 70%"></div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 90%"></div>
+<div class="w-full bg-primary rounded-t-lg transition-all relative group" style="height: 95%">
+<div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Spike Detected</div>
+</div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 80%"></div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 55%"></div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 40%"></div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 65%"></div>
+<div class="w-full bg-surface-container rounded-t-lg transition-all hover:bg-primary-container" style="height: 85%"></div>
+</div>
+<div class="flex justify-between mt-4 text-metadata font-metadata text-on-surface-variant">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+<!-- AI Insights Sidebar -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<div class="level-1-card ai-glow p-6">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h4 class="font-label-caps text-label-caps uppercase tracking-wider">Captain's Recommendation</h4>
+</div>
+<p class="text-body-md font-body-md text-on-surface mb-4 italic">"Based on IC-294 behavior, I recommend scaling the Redis-Internal cluster by 2 nodes to alleviate connection pressure."</p>
+<button class="w-full py-2 bg-primary-container text-on-primary-container rounded-lg font-label-caps text-label-caps hover:brightness-95">EXECUTE AUTO-SCALE</button>
+</div>
+<div class="level-1-card p-6">
+<h4 class="font-label-caps text-label-caps text-on-surface-variant mb-4 uppercase">Infrastructure Health</h4>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-metadata font-metadata">us-east-1a</span>
+</div>
+<span class="text-metadata font-metadata">99.9%</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<span class="text-metadata font-metadata">us-east-1b</span>
+</div>
+<span class="text-metadata font-metadata text-error">Latency Spike</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-metadata font-metadata">eu-west-1</span>
+</div>
+<span class="text-metadata font-metadata">100%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Feed -->
+<section class="mt-gutter">
+<h3 class="font-headline-md text-headline-md mb-6 flex items-center gap-3">
+                Recent Artifacts
+                <span class="text-metadata font-metadata bg-surface-container px-2 py-1 rounded text-on-surface-variant font-normal">24h History</span>
+</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<div class="level-1-card p-4 flex items-center gap-4">
+<div class="w-10 h-10 bg-tertiary-container rounded-lg flex items-center justify-center text-on-tertiary-container">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<p class="text-body-md font-body-md font-semibold truncate">heap-dump-01.hprof</p>
+<p class="text-metadata font-metadata text-on-surface-variant">2.4 GB • 2m ago</p>
+</div>
+</div>
+<div class="level-1-card p-4 flex items-center gap-4">
+<div class="w-10 h-10 bg-secondary-container rounded-lg flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined">movie</span>
+</div>
+<div>
+<p class="text-body-md font-body-md font-semibold truncate">console-replay-294.mp4</p>
+<p class="text-metadata font-metadata text-on-surface-variant">14 MB • 15m ago</p>
+</div>
+</div>
+<div class="level-1-card p-4 flex items-center gap-4">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined">data_object</span>
+</div>
+<div>
+<p class="text-body-md font-body-md font-semibold truncate">config-delta.json</p>
+<p class="text-metadata font-metadata text-on-surface-variant">12 KB • 1h ago</p>
+</div>
+</div>
+<div class="level-1-card p-4 flex items-center justify-center border-dashed border-2 border-outline-variant/50 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined">add</span>
+<span class="font-label-caps text-label-caps">ATTACH ARTIFACT</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Action Drawer (Mobile Only / Responsive Check) -->
+<div class="fixed bottom-6 right-6 lg:hidden z-50">
+<button class="w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add_alert</span>
+</button>
+</div>
+<script>
+        // Simple Interaction logic for sidebar tooltips and hover effects
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Remove active classes from others
+                document.querySelectorAll('nav a').forEach(l => {
+                    l.classList.remove('text-primary');
+                    l.classList.add('text-on-surface-variant');
+                    l.querySelector('span').style.fontVariationSettings = "'FILL' 0";
+                });
+                // Add active to current
+                link.classList.add('text-primary');
+                link.classList.remove('text-on-surface-variant');
+                link.querySelector('span').style.fontVariationSettings = "'FILL' 1";
+            });
+        });
+
+        // Simple real-time update simulator for the graph
+        setInterval(() => {
+            const bars = document.querySelectorAll('.relative.h-64 div');
+            bars.forEach(bar => {
+                if (!bar.classList.contains('bg-primary')) {
+                    const currentHeight = parseInt(bar.style.height);
+                    const change = (Math.random() - 0.5) * 5;
+                    bar.style.height = Math.max(20, Math.min(100, currentHeight + change)) + '%';
+                }
+            });
+        }, 2000);
+    </script>
+</body></html>

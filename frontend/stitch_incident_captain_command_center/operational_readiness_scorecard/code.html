@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Readiness &amp; Quality | Incident Captain</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Shared Components JSON Logic Application -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "surface-bright": "#f8f9fa",
+                "tertiary-fixed": "#d1e4ff",
+                "surface-container-highest": "#e1e3e4",
+                "on-error-container": "#93000a",
+                "on-primary-fixed-variant": "#394e00",
+                "secondary-container": "#dde0e5",
+                "surface-variant": "#e1e3e4",
+                "surface-container-low": "#f3f4f5",
+                "surface-container": "#edeeef",
+                "on-tertiary-fixed": "#001d35",
+                "on-secondary-fixed-variant": "#43474c",
+                "primary": "#4c6700",
+                "on-secondary": "#ffffff",
+                "background": "#f8f9fa",
+                "inverse-primary": "#a3d800",
+                "on-secondary-container": "#5f6368",
+                "on-primary-fixed": "#151f00",
+                "on-surface-variant": "#434933",
+                "on-tertiary": "#ffffff",
+                "secondary": "#5b5f63",
+                "tertiary": "#0062a1",
+                "primary-fixed-dim": "#a3d800",
+                "surface-dim": "#d9dadb",
+                "on-error": "#ffffff",
+                "surface-tint": "#4c6700",
+                "secondary-fixed-dim": "#c3c7cc",
+                "on-surface": "#191c1d",
+                "outline-variant": "#c3caac",
+                "on-primary-container": "#567300",
+                "on-primary": "#ffffff",
+                "outline": "#737a61",
+                "error": "#ba1a1a",
+                "primary-container": "#c1ff00",
+                "tertiary-container": "#dfecff",
+                "surface-container-high": "#e7e8e9",
+                "on-secondary-fixed": "#181c20",
+                "on-tertiary-container": "#006db4",
+                "surface": "#f8f9fa",
+                "surface-container-lowest": "#ffffff",
+                "secondary-fixed": "#e0e3e8",
+                "on-tertiary-fixed-variant": "#00497b",
+                "error-container": "#ffdad6",
+                "inverse-on-surface": "#f0f1f2",
+                "tertiary-fixed-dim": "#9dcaff",
+                "inverse-surface": "#2e3132",
+                "primary-fixed": "#baf600",
+                "on-background": "#191c1d"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "24": "24px",
+                "full": "9999px"
+            },
+            "spacing": {
+                "margin-page": "32px",
+                "gutter": "24px",
+                "base": "8px",
+                "card-padding": "24px",
+                "stack-sm": "12px",
+                "stack-md": "20px"
+            },
+            "fontFamily": {
+                "body-lg": ["Inter"],
+                "metadata": ["Inter"],
+                "label-caps": ["Inter"],
+                "display-lg": ["Inter"],
+                "headline-lg": ["Inter"],
+                "headline-md": ["Inter"],
+                "body-md": ["Inter"]
+            },
+            "fontSize": {
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "metadata": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                "body-md": ["15px", {"lineHeight": "22px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .asymmetric-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 40px 60px -15px rgba(0, 0, 0, 0.03);
+        }
+        .mission-control-gradient {
+            background: linear-gradient(135deg, #f8f9fa 0%, #edeeef 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface-bright font-body-md text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-20 hover:w-64 transition-all duration-300 z-50 bg-surface-container-lowest border-r border-outline-variant/20 shadow-[40px_0_60px_-15px_rgba(0,0,0,0.03)] flex flex-col items-center justify-between py-8 overflow-hidden group">
+<div class="flex flex-col items-center w-full gap-8">
+<div class="flex items-center gap-3 px-6 w-full">
+<div class="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-on-primary-container filled-icon">security</span>
+</div>
+<div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+<h1 class="font-headline-md-mobile text-primary font-black">IC-01</h1>
+<p class="font-metadata text-metadata text-on-surface-variant">Vigilant Mode</p>
+</div>
+</div>
+<nav class="flex flex-col w-full gap-2">
+<a class="flex items-center gap-4 px-6 py-3 w-full group-hover:translate-x-1 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<span class="opacity-0 group-hover:opacity-100 font-label-caps text-label-caps uppercase">Command</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 w-full group-hover:translate-x-1 transition-all duration-200 bg-primary-container text-on-primary-container border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined filled-icon">troubleshoot</span>
+<span class="opacity-0 group-hover:opacity-100 font-label-caps text-label-caps uppercase">Investigation</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 w-full group-hover:translate-x-1 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="opacity-0 group-hover:opacity-100 font-label-caps text-label-caps uppercase">Telemetry</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 w-full group-hover:translate-x-1 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="opacity-0 group-hover:opacity-100 font-label-caps text-label-caps uppercase">Settings</span>
+</a>
+</nav>
+</div>
+<div class="flex flex-col w-full gap-2">
+<a class="flex items-center gap-4 px-6 py-3 w-full text-on-surface-variant hover:text-primary" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="opacity-0 group-hover:opacity-100 font-label-caps text-label-caps uppercase">Support</span>
+</a>
+<div class="px-6 py-3 flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex-shrink-0">
+<img class="w-full h-full object-cover rounded-full" data-alt="A professional headshot of a male operations director in his 40s, wearing a crisp white shirt and navy blazer. The lighting is bright and clean, reflecting a high-end corporate command center environment. He has a focused, vigilant expression appropriate for a mission-critical platform user." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4phH6TZZNPxXGDPiNi3mrLWIRIFomig5uRGZAQctiDyPJIDQwK32OGtG-WT2r0j9we3sg2dhz1C8odUD8jcU2J6nthDox3MakInVhUdytAntAGG7657-_d1ZVd4QNGNJlu5M3CmD4882IuM4jcp-ukQSe6FLdSkGU3cA1hhkpj_BVGfzyyFsgn_EOsXy8sGY1i5bts3zCvC4ZdDLxA2cj-4XRpL2MnIublh12hyRgSMQ7WZMNTvGaPT4dTKfnmUVo9TDJvgWdFpAQ"/>
+</div>
+<span class="opacity-0 group-hover:opacity-100 font-label-caps text-label-caps uppercase">Profile</span>
+</div>
+</div>
+</aside>
+<main class="pl-20 min-h-screen">
+<!-- TopAppBar Anchor -->
+<header class="flex justify-between items-center w-full px-margin-page py-4 gap-gutter bg-surface-container-lowest border-b border-outline-variant/10 shadow-sm sticky top-0 z-40">
+<div class="flex items-center gap-8">
+<span class="font-display-lg text-headline-md font-bold tracking-tighter text-on-surface">Incident Captain</span>
+<nav class="hidden md:flex items-center gap-2">
+<a class="text-on-surface-variant hover:text-on-surface px-3 py-1 font-label-caps text-label-caps uppercase" href="#">Live</a>
+<a class="text-on-primary-fixed-variant bg-primary-fixed rounded-full px-4 py-1.5 font-bold font-label-caps text-label-caps uppercase" href="#">Readiness</a>
+<a class="text-on-surface-variant hover:text-on-surface px-3 py-1 font-label-caps text-label-caps uppercase" href="#">Local</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<input class="bg-surface-container-low border-none rounded-24 px-10 py-2 focus:ring-2 focus:ring-primary w-64 transition-all duration-300" placeholder="Search incidents..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined">hub</span>
+</button>
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined">monitor_heart</span>
+</button>
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-all active:scale-90 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-surface-container-lowest"></span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<div class="p-margin-page">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+<div>
+<p class="font-label-caps text-label-caps text-primary uppercase mb-1">Mission Integrity Unit</p>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Readiness &amp; Quality Dashboard</h2>
+</div>
+<div class="flex gap-3">
+<button class="bg-surface-container-lowest border border-outline-variant/30 px-6 py-2.5 rounded-24 font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high transition-all">
+                        EXPORT REPORT
+                    </button>
+<button class="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-24 font-label-caps text-label-caps hover:shadow-lg hover:shadow-primary-container/20 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] filled-icon">rocket_launch</span>
+                        DEPLOY INCIDENT
+                    </button>
+</div>
+</div>
+<!-- Asymmetrical Modular Grid -->
+<div class="asymmetric-grid">
+<!-- Left Column: Core Readiness -->
+<div class="col-span-12 lg:col-span-7 flex flex-col gap-gutter">
+<!-- Main Radial Module -->
+<div class="glass-card rounded-24 p-card-padding relative overflow-hidden flex flex-col md:flex-row items-center gap-10">
+<div class="relative w-64 h-64 flex-shrink-0">
+<!-- SVG Radial Progress -->
+<svg class="w-full h-full -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-container-high" cx="50" cy="50" fill="transparent" r="45" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary-container transition-all duration-1000" cx="50" cy="50" fill="transparent" r="45" stroke="currentColor" stroke-dasharray="282.7" stroke-dashoffset="22.6" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display-lg text-[64px] leading-none text-on-surface">92</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">% SCORE</span>
+</div>
+</div>
+<div class="flex-grow flex flex-col gap-6">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-primary-container/20 text-on-primary-container rounded-full w-fit">
+<span class="material-symbols-outlined text-sm filled-icon">verified</span>
+<span class="font-label-caps text-label-caps uppercase">Submission Ready</span>
+</div>
+<h3 class="font-headline-md text-headline-md leading-tight">Operational integrity exceeds the safety threshold for Q3 mission parameters.</h3>
+<p class="font-body-md text-on-surface-variant">The current readiness score is derived from aggregate health telemetry across all tactical squads. Speed and Impact metrics are performing 12% above benchmark.</p>
+<div class="grid grid-cols-2 gap-4 mt-2">
+<div class="p-3 bg-surface-container rounded-xl">
+<p class="font-label-caps text-[10px] text-on-surface-variant uppercase mb-1">Confidence Interval</p>
+<p class="font-headline-md text-headline-md text-primary">High</p>
+</div>
+<div class="p-3 bg-surface-container rounded-xl">
+<p class="font-label-caps text-[10px] text-on-surface-variant uppercase mb-1">Last Sync</p>
+<p class="font-headline-md text-headline-md text-on-surface">2m ago</p>
+</div>
+</div>
+</div>
+<!-- AI Insight Overlay -->
+<div class="absolute top-4 right-4 group">
+<div class="bg-primary-container p-2 rounded-lg cursor-help transition-all group-hover:scale-110">
+<span class="material-symbols-outlined text-on-primary-container filled-icon">bolt</span>
+</div>
+<div class="absolute right-0 top-12 w-64 glass-card p-4 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 border-primary/20 border-l-4">
+<p class="font-label-caps text-label-caps text-primary uppercase mb-2">AI Captain Insight</p>
+<p class="text-metadata text-on-surface-variant italic">"Current trend suggests reaching 95% by 14:00 if secondary Completeness targets are met."</p>
+</div>
+</div>
+</div>
+<!-- Health Strips Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Reliability -->
+<div class="glass-card rounded-24 p-6 border-l-4 border-primary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary bg-primary-container/20 p-2 rounded-lg">shield</span>
+<div class="text-right">
+<p class="font-headline-md text-headline-md text-on-surface">98.2</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Reliability</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container transition-all duration-700" style="width: 98.2%"></div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex gap-1">
+<div class="h-4 w-1 bg-primary-container rounded-full"></div>
+<div class="h-6 w-1 bg-primary-container rounded-full"></div>
+<div class="h-3 w-1 bg-primary-container rounded-full"></div>
+<div class="h-5 w-1 bg-primary-container rounded-full"></div>
+<div class="h-7 w-1 bg-primary-container rounded-full"></div>
+</div>
+<span class="text-metadata text-on-primary font-bold bg-primary px-2 py-0.5 rounded">+4.1%</span>
+</div>
+</div>
+<!-- Completeness -->
+<div class="glass-card rounded-24 p-6 border-l-4 border-primary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary bg-primary-container/20 p-2 rounded-lg">checklist</span>
+<div class="text-right">
+<p class="font-headline-md text-headline-md text-on-surface">87.5</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Completeness</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container transition-all duration-700" style="width: 87.5%"></div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex gap-1">
+<div class="h-5 w-1 bg-primary-container rounded-full"></div>
+<div class="h-3 w-1 bg-primary-container rounded-full"></div>
+<div class="h-6 w-1 bg-primary-container rounded-full"></div>
+<div class="h-4 w-1 bg-primary-container rounded-full"></div>
+<div class="h-2 w-1 bg-primary-container rounded-full"></div>
+</div>
+<span class="text-metadata text-on-surface-variant">-0.2%</span>
+</div>
+</div>
+<!-- Speed -->
+<div class="glass-card rounded-24 p-6 border-l-4 border-primary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary bg-primary-container/20 p-2 rounded-lg">speed</span>
+<div class="text-right">
+<p class="font-headline-md text-headline-md text-on-surface">94.1</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Speed</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container transition-all duration-700" style="width: 94.1%"></div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex gap-1">
+<div class="h-2 w-1 bg-primary-container rounded-full"></div>
+<div class="h-4 w-1 bg-primary-container rounded-full"></div>
+<div class="h-7 w-1 bg-primary-container rounded-full"></div>
+<div class="h-5 w-1 bg-primary-container rounded-full"></div>
+<div class="h-6 w-1 bg-primary-container rounded-full"></div>
+</div>
+<span class="text-metadata text-on-primary font-bold bg-primary px-2 py-0.5 rounded">+12.8%</span>
+</div>
+</div>
+<!-- Impact -->
+<div class="glass-card rounded-24 p-6 border-l-4 border-primary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary bg-primary-container/20 p-2 rounded-lg">auto_graph</span>
+<div class="text-right">
+<p class="font-headline-md text-headline-md text-on-surface">91.3</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Impact</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container transition-all duration-700" style="width: 91.3%"></div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex gap-1">
+<div class="h-6 w-1 bg-primary-container rounded-full"></div>
+<div class="h-5 w-1 bg-primary-container rounded-full"></div>
+<div class="h-4 w-1 bg-primary-container rounded-full"></div>
+<div class="h-6 w-1 bg-primary-container rounded-full"></div>
+<div class="h-8 w-1 bg-primary-container rounded-full"></div>
+</div>
+<span class="text-metadata text-on-primary font-bold bg-primary px-2 py-0.5 rounded">+2.4%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Secondary Data & Trends -->
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-gutter">
+<!-- Confidence Trends Card -->
+<div class="glass-card rounded-24 p-card-padding flex flex-col h-full">
+<div class="flex justify-between items-center mb-8">
+<h3 class="font-headline-md text-headline-md text-on-surface">Confidence Index</h3>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="font-label-caps text-label-caps">LAST 7D</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+</div>
+<div class="flex-grow flex items-end justify-between gap-4 h-48 pb-4 border-b border-outline-variant/10">
+<!-- High End Visualization Pattern -->
+<div class="flex flex-col items-center gap-2 flex-grow">
+<div class="w-full bg-surface-container-low rounded-t-lg relative group h-32">
+<div class="absolute bottom-0 left-0 right-0 bg-primary-container rounded-t-lg transition-all duration-1000 group-hover:bg-primary" style="height: 70%"></div>
+</div>
+<span class="font-metadata text-metadata text-on-surface-variant uppercase">Mon</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-grow">
+<div class="w-full bg-surface-container-low rounded-t-lg relative group h-32">
+<div class="absolute bottom-0 left-0 right-0 bg-primary-container rounded-t-lg transition-all duration-1000 group-hover:bg-primary" style="height: 85%"></div>
+</div>
+<span class="font-metadata text-metadata text-on-surface-variant uppercase">Tue</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-grow">
+<div class="w-full bg-surface-container-low rounded-t-lg relative group h-32">
+<div class="absolute bottom-0 left-0 right-0 bg-primary-container rounded-t-lg transition-all duration-1000 group-hover:bg-primary" style="height: 82%"></div>
+</div>
+<span class="font-metadata text-metadata text-on-surface-variant uppercase">Wed</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-grow">
+<div class="w-full bg-surface-container-low rounded-t-lg relative group h-32">
+<div class="absolute bottom-0 left-0 right-0 bg-primary-container rounded-t-lg transition-all duration-1000 group-hover:bg-primary" style="height: 94%"></div>
+</div>
+<span class="font-metadata text-metadata text-on-surface-variant uppercase">Thu</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-grow">
+<div class="w-full bg-surface-container-low rounded-t-lg relative group h-32">
+<div class="absolute bottom-0 left-0 right-0 bg-primary-container rounded-t-lg transition-all duration-1000 group-hover:bg-primary" style="height: 92%"></div>
+</div>
+<span class="font-metadata text-metadata text-on-surface-variant uppercase">Fri</span>
+</div>
+</div>
+<div class="mt-8 space-y-4">
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-24">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary-container"></div>
+<span class="font-body-md text-on-surface">System Calibration</span>
+</div>
+<span class="font-metadata text-metadata text-on-surface-variant">OPTIMAL</span>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-24">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="font-body-md text-on-surface">Squad Alignment</span>
+</div>
+<span class="font-metadata text-metadata text-on-surface-variant">92% SYNC</span>
+</div>
+</div>
+</div>
+<!-- AI Quality Control Module -->
+<div class="rounded-24 p-card-padding bg-inverse-surface text-inverse-on-surface shadow-2xl relative overflow-hidden group">
+<div class="absolute -right-8 -bottom-8 w-48 h-48 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/40 transition-all duration-500"></div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-sm filled-icon">psychology</span>
+</div>
+<span class="font-label-caps text-label-caps text-primary-container uppercase tracking-widest">Captain's Protocol</span>
+</div>
+<h4 class="font-headline-md text-headline-md mb-2">Automated Quality Sweep</h4>
+<p class="font-body-md text-on-surface-variant mb-6 opacity-80">Scanning 4,821 telemetry points for mission anomalies. 0 critical deviations detected in current cycle.</p>
+<button class="w-full bg-primary text-on-primary font-label-caps text-label-caps py-3 rounded-24 hover:bg-primary-container hover:text-on-primary-container transition-all flex items-center justify-center gap-2">
+                                RE-SCAN PARAMETERS
+                                <span class="material-symbols-outlined text-[18px]">sync</span>
+</button>
+</div>
+</div>
+<!-- Squad Readiness Grid -->
+<div class="glass-card rounded-24 p-6">
+<h4 class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-6">Tactical Unit Status</h4>
+<div class="space-y-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="A portrait of a male data scientist in his late 20s with a modern tech vibe, wearing noise-canceling headphones around his neck. The setting is a minimalist workspace with soft cyan and lime ambient lighting, evoking a surgical precision and high-tech feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDn5GBeTQ3mPRSSkjOvCERHSiThx-1J3L9a9y98iu-rUlZzb7B48dVAFz58nOmbhSPBupsT1ondO9fCfd8Il3a0vz8bGZIe4zpBXPM3uIF8gsKTEd-c7X3e_X4ZDA4PoYA3KsEAO36o0-DySw_UF8_Hg2_FyXCHpxBkTs4tMm8XBzKPWsqBRE9aGKkO9rgZF2brZlfju2FkJywJo8GzFC3RmxZLI9j9FQcV6OaCPCoHIDJH4YvWZiXDpCYUkkcR4aYdv30S_FXPpFDF"/>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between mb-1">
+<span class="font-metadata text-metadata font-bold">Alpha Ops</span>
+<span class="font-metadata text-metadata text-primary">98%</span>
+</div>
+<div class="h-1 bg-surface-container rounded-full">
+<div class="h-full bg-primary-container w-[98%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a female systems architect in her early 30s, looking directly at the camera with confidence. The background is a blurred high-tech interface with lime-green accent lights, creating a 'Mission Control' aesthetic. Her style is professional yet technologically futuristic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRwioxmyzodgCSl3wsCZgVB1n0utBpbVDAEbGPs7ZEMo7vCcWIX5uDDRtmFTecmHgz8gYAlqze_rmik9rm267nahWJQL2SBj_aw7VGkc9qd6q497Qe2_K8UOmL8yRnXVJ17YWadpUw6UISBN7izaBr9UwHLGOerq5DixQoPVH1NG105eM8HAYLts97ynbgpYvGlll3LLgllBQDshY3JcVEApXP5sH1pzisJg-IzeGFHjHnyXA4f9ny8kGR2Tx4cFNK8MI_4ScJFrne"/>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between mb-1">
+<span class="font-metadata text-metadata font-bold">Zeta Core</span>
+<span class="font-metadata text-metadata text-primary">91%</span>
+</div>
+<div class="h-1 bg-surface-container rounded-full">
+<div class="h-full bg-primary-container w-[91%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Interactive Atmospheric Elements -->
+<script>
+        // Micro-interaction for the radial progress ring on load
+        window.addEventListener('load', () => {
+            const circle = document.querySelector('circle[stroke-dasharray="282.7"]');
+            if (circle) {
+                // Initial state set in HTML (dashoffset 22.6 for 92%)
+                // Could animate from 282.7 to 22.6 here if desired for dramatic effect
+                circle.style.strokeDashoffset = "282.7";
+                setTimeout(() => {
+                    circle.style.strokeDashoffset = "22.6";
+                }, 300);
+            }
+        });
+
+        // Hover effect for side navigation icons to add filling
+        document.querySelectorAll('aside nav a').forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                const icon = link.querySelector('.material-symbols-outlined');
+                if (!link.classList.contains('bg-primary-container')) {
+                   icon.style.fontVariationSettings = "'FILL' 1";
+                }
+            });
+            link.addEventListener('mouseleave', () => {
+                const icon = link.querySelector('.material-symbols-outlined');
+                if (!link.classList.contains('bg-primary-container')) {
+                   icon.style.fontVariationSettings = "'FILL' 0";
+                }
+            });
+        });
+    </script>
+</body></html>

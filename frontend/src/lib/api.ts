@@ -1,0 +1,73 @@
+import type {
+  AnalyzeResponse,
+  EvidenceResponse,
+  ReadinessResponse,
+  RunHistoryRow,
+  ShipReadinessResponse,
+} from "@/lib/types"
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787"
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    ...init,
+  })
+  const payload = (await res.json()) as T | { error?: string }
+  if (!res.ok) {
+    const message = (payload as { error?: string }).error ?? `Request failed (${res.status})`
+    throw new Error(message)
+  }
+  return payload as T
+}
+
+export function analyzeIncident(input: {
+  incident_id: string
+  github_owner?: string
+  github_repo?: string
+  env_file?: string
+  output_dir?: string
+  metrics_log?: string
+  workflow_log?: string
+  coral_timeout_sec?: number
+  coral_retries?: number
+  coral_backoff_sec?: number
+}): Promise<AnalyzeResponse> {
+  return request<AnalyzeResponse>("/api/analyze", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export function getEvidence(incidentId: string, outputDir = "output"): Promise<EvidenceResponse> {
+  const q = new URLSearchParams({ incident_id: incidentId, output_dir: outputDir })
+  return request<EvidenceResponse>(`/api/evidence?${q.toString()}`)
+}
+
+export function getReadiness(reportDir = "output/report"): Promise<ReadinessResponse> {
+  const q = new URLSearchParams({ report_dir: reportDir })
+  return request<ReadinessResponse>(`/api/readiness?${q.toString()}`)
+}
+
+export function runShipReadiness(input: {
+  incident_id: string
+  root?: string
+  output_dir?: string
+  report_dir?: string
+  metrics_log?: string
+  recent_runs?: number
+  min_progress_percent?: number
+  min_scorecard_overall?: number
+}): Promise<ShipReadinessResponse> {
+  return request<ShipReadinessResponse>("/api/ship-readiness", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export async function getRunHistory(metricsLog = "output/run_metrics.jsonl"): Promise<RunHistoryRow[]> {
+  const q = new URLSearchParams({ metrics_log: metricsLog })
+  const payload = await request<{ rows: RunHistoryRow[] }>(`/api/run-history?${q.toString()}`)
+  return payload.rows
+}
+
