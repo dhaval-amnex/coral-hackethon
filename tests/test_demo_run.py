@@ -8,6 +8,12 @@ from incident_captain.coral import CoralClient
 
 
 def test_demo_run(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("PAGERDUTY_API_TOKEN", "x")
+    monkeypatch.setenv("DD_API_KEY", "x")
+    monkeypatch.setenv("DD_APPLICATION_KEY", "x")
+    monkeypatch.setenv("SLACK_TOKEN", "x")
+    monkeypatch.setenv("GITHUB_TOKEN", "x")
+
     sql_dir = tmp_path / "sql"
     sql_dir.mkdir(parents=True, exist_ok=True)
     for _, file_name in QUERY_FILES:
