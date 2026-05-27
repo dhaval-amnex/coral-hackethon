@@ -51,17 +51,31 @@ export function App() {
   const [visitedEvidence, setVisitedEvidence] = useState(false)
   const [visitedReadiness, setVisitedReadiness] = useState(false)
   const [visitedSubmission, setVisitedSubmission] = useState(false)
+  const [lastHealthRefreshAt, setLastHealthRefreshAt] = useState<string>("")
+  const [lastArtifactsRefreshAt, setLastArtifactsRefreshAt] = useState<string>("")
+  const [activityFeed, setActivityFeed] = useState<string[]>([])
+
+  function pushActivity(message: string) {
+    const ts = new Date().toLocaleTimeString()
+    setActivityFeed((prev) => [`${ts} ${message}`, ...prev].slice(0, 4))
+  }
 
   useEffect(() => {
     getSourceHealth()
-      .then((x) => setSourceHealth(x.sources))
+      .then((x) => {
+        setSourceHealth(x.sources)
+        setLastHealthRefreshAt(new Date().toLocaleTimeString())
+      })
       .catch(() => setSourceHealth({}))
   }, [])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       getSourceHealth()
-        .then((x) => setSourceHealth(x.sources))
+        .then((x) => {
+          setSourceHealth(x.sources)
+          setLastHealthRefreshAt(new Date().toLocaleTimeString())
+        })
         .catch(() => {})
     }, 15000)
     return () => window.clearInterval(timer)
@@ -69,18 +83,35 @@ export function App() {
 
   useEffect(() => {
     getArtifactsStatus()
-      .then((x) => setArtifactsStatus(x))
+      .then((x) => {
+        setArtifactsStatus(x)
+        setLastArtifactsRefreshAt(new Date().toLocaleTimeString())
+      })
       .catch(() => setArtifactsStatus(null))
   }, [section, lastAnalyze])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       getArtifactsStatus()
-        .then((x) => setArtifactsStatus(x))
+        .then((x) => {
+          setArtifactsStatus(x)
+          setLastArtifactsRefreshAt(new Date().toLocaleTimeString())
+        })
         .catch(() => {})
     }, 10000)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!lastAnalyze) return
+    pushActivity(`Analyze completed (${lastAnalyze.incident_id}, ${lastAnalyze.brief.confidence})`)
+  }, [lastAnalyze])
+
+  useEffect(() => {
+    if (!artifactsStatus) return
+    const ready = artifactsStatus.artifacts?.judge_pack_zip?.exists
+    pushActivity(ready ? "Judge pack ready" : "Judge pack missing")
+  }, [artifactsStatus])
 
   function navigateTo(next: Section) {
     setSection(next)
@@ -245,6 +276,11 @@ export function App() {
             ) : (
               <Badge variant="outline">no run yet</Badge>
             )}
+            <Badge variant="outline">health: {lastHealthRefreshAt || "..."}</Badge>
+            <Badge variant="outline">artifacts: {lastArtifactsRefreshAt || "..."}</Badge>
+            {activityFeed.length > 0 ? (
+              <Badge variant="outline">activity: {activityFeed[0]}</Badge>
+            ) : null}
           </header>
           {renderSection()}
         </main>
