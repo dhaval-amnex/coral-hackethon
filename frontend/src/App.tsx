@@ -9,6 +9,7 @@ import { DashboardPage } from "@/features/dashboard-page"
 import { EvidencePage } from "@/features/evidence-page"
 import { HistoryPage } from "@/features/history-page"
 import { ReadinessPage } from "@/features/readiness-page"
+import { SubmissionPage } from "@/features/submission-page"
 import type { AnalyzeResponse } from "@/lib/types"
 import {
   analyzeIncidentStart,
@@ -20,7 +21,7 @@ import {
 } from "@/lib/api"
 import type { ArtifactsStatusResponse } from "@/lib/types"
 
-type Section = "dashboard" | "analyze" | "evidence" | "readiness" | "artifacts" | "history"
+type Section = "dashboard" | "analyze" | "evidence" | "readiness" | "artifacts" | "submission" | "history"
 
 const NAV: Array<{ id: Section; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
@@ -28,6 +29,7 @@ const NAV: Array<{ id: Section; label: string }> = [
   { id: "evidence", label: "Evidence" },
   { id: "readiness", label: "Readiness" },
   { id: "artifacts", label: "Artifacts" },
+  { id: "submission", label: "Submission" },
   { id: "history", label: "Run History" },
 ]
 
@@ -82,6 +84,7 @@ export function App() {
     if (section === "evidence") return <EvidencePage incidentId={activeIncidentId} />
     if (section === "readiness") return <ReadinessPage />
     if (section === "artifacts") return <ArtifactsPage />
+    if (section === "submission") return <SubmissionPage />
     return <HistoryPage />
   }
 
