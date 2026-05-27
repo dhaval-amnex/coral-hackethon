@@ -46,3 +46,7 @@ python -m incident_captain.cli close-live-loop --incident-id <INCIDENT_ID> --tab
 ```bash
 python -m pytest -q
 ```
+
+## CI and Releases
+- CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- Release/tagging process: [docs/release-process.md](docs/release-process.md)
