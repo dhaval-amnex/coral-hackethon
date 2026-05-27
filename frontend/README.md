@@ -1,21 +1,38 @@
-# React + TypeScript + Vite + shadcn/ui
+# Incident Captain Frontend
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+This frontend is the live command center for Incident Captain, built with React + TypeScript + Vite.
 
-## Adding components
-
-To add components to your app, run the following command:
+## Local Run
 
 ```bash
-npx shadcn@latest add button
+cd frontend
+npm install
+npm run dev
 ```
 
-This will place the ui components in the `src/components` directory.
+Default app URL: `http://127.0.0.1:5173`
 
-## Using components
+Backend API base is controlled by `VITE_API_BASE_URL` (defaults to `http://127.0.0.1:8787`).
 
-To use the components in your app, import them as follows:
+## Quality Checks
 
-```tsx
-import { Button } from "@/components/ui/button"
+```bash
+npm run typecheck
+npm run build
 ```
+
+## E2E Smoke Tests
+
+One-time browser setup:
+
+```bash
+npx playwright install chromium
+```
+
+Run smoke tests:
+
+```bash
+npm run e2e
+```
+
+The smoke tests mock API calls so they can run without live PagerDuty/GitHub/Slack/Datadog credentials.
