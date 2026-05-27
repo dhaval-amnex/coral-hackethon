@@ -26,6 +26,11 @@ export interface AnalyzeResponse {
   total_duration_ms: number
 }
 
+export interface SourceHealthResponse {
+  sources: Record<string, string>
+  env_missing: Record<string, string[]>
+}
+
 export interface EvidenceResponse {
   incident_id: string
   evidence: EvidenceItem[]
@@ -70,4 +75,3 @@ export interface RunHistoryRow {
   query_errors?: number
   [k: string]: unknown
 }
-

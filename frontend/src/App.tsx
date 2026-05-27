@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useEffect } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,6 +10,7 @@ import { EvidencePage } from "@/features/evidence-page"
 import { HistoryPage } from "@/features/history-page"
 import { ReadinessPage } from "@/features/readiness-page"
 import type { AnalyzeResponse } from "@/lib/types"
+import { getSourceHealth } from "@/lib/api"
 
 type Section = "dashboard" | "analyze" | "evidence" | "readiness" | "artifacts" | "history"
 
@@ -25,6 +27,13 @@ export function App() {
   const [section, setSection] = useState<Section>("dashboard")
   const [activeIncidentId, setActiveIncidentId] = useState("INC-1001")
   const [lastAnalyze, setLastAnalyze] = useState<AnalyzeResponse | null>(null)
+  const [sourceHealth, setSourceHealth] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    getSourceHealth()
+      .then((x) => setSourceHealth(x.sources))
+      .catch(() => setSourceHealth({}))
+  }, [])
 
   function renderSection() {
     if (section === "dashboard") return <DashboardPage activeIncidentId={activeIncidentId} />
@@ -66,6 +75,11 @@ export function App() {
           <header className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 text-sm">
             <Badge variant="outline">API: http://127.0.0.1:8787</Badge>
             <Badge>{activeIncidentId}</Badge>
+            {Object.entries(sourceHealth).map(([name, state]) => (
+              <Badge key={name} variant={state === "ok" ? "default" : "destructive"}>
+                {name}:{state}
+              </Badge>
+            ))}
             {lastAnalyze ? (
               <Badge variant="outline">confidence: {lastAnalyze.brief.confidence}</Badge>
             ) : (

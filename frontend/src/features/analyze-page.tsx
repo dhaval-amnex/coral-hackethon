@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 
 interface AnalyzePageProps {
   onAnalyzed: (incidentId: string, payload: AnalyzeResponse) => void
@@ -84,10 +85,30 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
             <p className="text-sm">
               <strong>Owners:</strong> {result.brief.owners.join(", ") || "n/a"}
             </p>
+            <Separator />
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Workflow Timeline</p>
+              <ol className="grid gap-1 text-xs text-muted-foreground">
+                {result.workflow_log.map((step, idx) => (
+                  <li key={idx}>
+                    {String(step.step ?? `step-${idx}`)} - {String(step.status ?? "unknown")} (
+                    {String(step.duration_ms ?? 0)}ms)
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Diagnostics</p>
+              <p className="text-xs text-muted-foreground">
+                Query errors:{" "}
+                {Array.isArray(result.brief.diagnostics?.errors)
+                  ? String(result.brief.diagnostics.errors.length)
+                  : "0"}
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
     </div>
   )
 }
-

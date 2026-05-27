@@ -14,12 +14,14 @@ export function EvidencePage({ incidentId }: EvidencePageProps) {
   const [evidence, setEvidence] = useState<EvidenceItem[]>([])
   const [filter, setFilter] = useState("")
   const [error, setError] = useState("")
+  const [diagnostics, setDiagnostics] = useState<Record<string, unknown>>({})
 
   useEffect(() => {
     if (!incidentId) return
     getEvidence(incidentId)
       .then((data) => {
         setEvidence(data.evidence)
+        setDiagnostics(data.diagnostics ?? {})
         setError("")
       })
       .catch((err: unknown) => {
@@ -48,35 +50,42 @@ export function EvidencePage({ incidentId }: EvidencePageProps) {
         {error ? (
           <p className="text-sm text-destructive">{error}</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Detail</TableHead>
-                <TableHead>Link</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((row, idx) => (
-                <TableRow key={`${row.type}-${idx}`}>
-                  <TableCell>{row.type}</TableCell>
-                  <TableCell>{row.detail}</TableCell>
-                  <TableCell>
-                    {row.link ? (
-                      <a className="text-primary underline" href={row.link} target="_blank" rel="noreferrer">
-                        open
-                      </a>
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
+          <div className="grid gap-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Detail</TableHead>
+                  <TableHead>Link</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((row, idx) => (
+                  <TableRow key={`${row.type}-${idx}`}>
+                    <TableCell>{row.type}</TableCell>
+                    <TableCell>{row.detail}</TableCell>
+                    <TableCell>
+                      {row.link ? (
+                        <a className="text-primary underline" href={row.link} target="_blank" rel="noreferrer">
+                          open
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="rounded-md border p-3">
+              <p className="mb-2 text-sm font-medium">Diagnostics</p>
+              <pre className="max-h-56 overflow-auto text-xs text-muted-foreground">
+                {JSON.stringify(diagnostics, null, 2)}
+              </pre>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
   )
 }
-

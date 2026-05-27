@@ -4,6 +4,7 @@ import type {
   ReadinessResponse,
   RunHistoryRow,
   ShipReadinessResponse,
+  SourceHealthResponse,
 } from "@/lib/types"
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787"
@@ -71,3 +72,13 @@ export async function getRunHistory(metricsLog = "output/run_metrics.jsonl"): Pr
   return payload.rows
 }
 
+export function getSourceHealth(
+  sources = ["pagerduty", "github", "slack", "datadog"],
+  envFile = ".env",
+): Promise<SourceHealthResponse> {
+  const q = new URLSearchParams({
+    sources: sources.join(","),
+    env_file: envFile,
+  })
+  return request<SourceHealthResponse>(`/api/source-health?${q.toString()}`)
+}

@@ -83,6 +83,25 @@ class _Handler(BaseHTTPRequestHandler):
             _json_response(self, HTTPStatus.OK, {"ok": True, "service": "incident-captain-api"})
             return
 
+        if path == "/api/source-health":
+            sources_param = (qs.get("sources", ["pagerduty,github,slack,datadog"])[0] or "").strip()
+            sources = [s.strip() for s in sources_param.split(",") if s.strip()]
+            env_file = Path((qs.get("env_file", [".env"])[0] or ".env").strip())
+            if env_file:
+                load_env_file(env_file)
+            v = validate_source_env(sources)
+            health: dict[str, str] = {}
+            if v.ok:
+                coral = CoralClient()
+                try:
+                    health = coral.source_health(sources)
+                except CoralError:
+                    health = {s: "failed" for s in sources}
+            else:
+                health = {s: ("missing_env" if s in v.missing else "unknown") for s in sources}
+            _json_response(self, HTTPStatus.OK, {"sources": health, "env_missing": v.missing})
+            return
+
         if path == "/api/evidence":
             incident_id = (qs.get("incident_id", [""])[0] or "").strip()
             output_dir = Path((qs.get("output_dir", ["output"])[0] or "output").strip())
@@ -291,4 +310,3 @@ def run_server(host: str = "127.0.0.1", port: int = 8787) -> None:
         pass
     finally:
         server.server_close()
-
