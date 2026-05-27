@@ -2,11 +2,11 @@ import { useEffect, useState } from "react"
 
 import { analyzeIncidentStart, getAnalyzeJobStatus } from "@/lib/api"
 import type { AnalyzeResponse } from "@/lib/types"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 
 interface AnalyzePageProps {
@@ -23,14 +23,30 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
   const [jobId, setJobId] = useState("")
   const [jobStatus, setJobStatus] = useState<"idle" | "queued" | "running" | "done" | "failed">("idle")
 
+  function normalizeOwner(input: string): string {
+    const value = input.trim()
+    if (!value) return ""
+    const match = value.match(/github\.com\/([^/\s]+)\/?$/i)
+    if (match) return match[1]
+    return value.replace(/^@/, "").replace(/\/+$/, "")
+  }
+
+  function normalizeRepo(input: string): string {
+    const value = input.trim()
+    if (!value) return ""
+    const match = value.match(/github\.com\/[^/\s]+\/([^/\s]+)\/?$/i)
+    if (match) return match[1].replace(/\.git$/i, "")
+    return value.replace(/\/+$/, "").replace(/\.git$/i, "")
+  }
+
   async function runAnalysis() {
     setLoading(true)
     setError("")
     try {
       const start = await analyzeIncidentStart({
         incident_id: incidentId.trim(),
-        github_owner: owner.trim(),
-        github_repo: repo.trim(),
+        github_owner: normalizeOwner(owner),
+        github_repo: normalizeRepo(repo),
       })
       setJobId(start.job_id)
       setJobStatus("queued")
@@ -102,9 +118,9 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
             <div className="md:col-span-2">
               <p className="mb-2 text-xs text-muted-foreground">Progress</p>
               <ol className="grid gap-1 text-xs">
-                <li>1. queued {jobStatus === "queued" || jobStatus === "running" || jobStatus === "done" ? "✓" : ""}</li>
-                <li>2. running {jobStatus === "running" || jobStatus === "done" ? "✓" : ""}</li>
-                <li>3. completed {jobStatus === "done" ? "✓" : ""}</li>
+                <li>1. queued {jobStatus === "queued" || jobStatus === "running" || jobStatus === "done" ? "[x]" : "[ ]"}</li>
+                <li>2. running {jobStatus === "running" || jobStatus === "done" ? "[x]" : "[ ]"}</li>
+                <li>3. completed {jobStatus === "done" ? "[x]" : "[ ]"}</li>
               </ol>
             </div>
           )}
@@ -135,8 +151,7 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
               <ol className="grid gap-1 text-xs text-muted-foreground">
                 {result.workflow_log.map((step, idx) => (
                   <li key={idx}>
-                    {String(step.step ?? `step-${idx}`)} - {String(step.status ?? "unknown")} (
-                    {String(step.duration_ms ?? 0)}ms)
+                    {String(step.step ?? `step-${idx}`)} - {String(step.status ?? "unknown")} ({String(step.duration_ms ?? 0)}ms)
                   </li>
                 ))}
               </ol>
@@ -145,9 +160,7 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
               <p className="text-sm font-medium">Diagnostics</p>
               <p className="text-xs text-muted-foreground">
                 Query errors:{" "}
-                {Array.isArray(result.brief.diagnostics?.errors)
-                  ? String(result.brief.diagnostics.errors.length)
-                  : "0"}
+                {Array.isArray(result.brief.diagnostics?.errors) ? String(result.brief.diagnostics.errors.length) : "0"}
               </p>
             </div>
           </CardContent>
