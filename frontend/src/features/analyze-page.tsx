@@ -97,6 +97,12 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
     | { score?: number; max_score?: number; missing_families?: string[]; source_availability_influence?: number }
     | undefined
   const discoverStep = result?.workflow_log.find((step) => String(step.step) === "discover_catalog")
+  const mcpNativeStep = result?.workflow_log.find((step) => String(step.step) === "mcp_native_catalog_loop")
+  const mcpSqlStep = result?.workflow_log.find((step) => String(step.step) === "mcp_catalog_loop")
+  const plannerRuntimeMode =
+    (mcpNativeStep?.detail as { mode?: string } | undefined)?.mode ??
+    (mcpSqlStep?.detail as { mode?: string } | undefined)?.mode ??
+    "sql"
   const queryPlan = (discoverStep?.detail as { query_plan?: Record<string, { enabled?: boolean; missing_tables?: string[]; missing_vars?: string[] }> } | undefined)?.query_plan
 
   return (
@@ -163,6 +169,13 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
                 <p className="text-muted-foreground">Duration</p>
                 <p className="font-semibold">{result.total_duration_ms}ms</p>
               </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Planner Runtime</span>
+              <Badge variant="outline">{plannerRuntimeMode}</Badge>
+              {plannerRuntimeMode === "mcp_native_fallback_sql" ? (
+                <span className="text-muted-foreground">MCP-native requested, SQL fallback used</span>
+              ) : null}
             </div>
             <p className="text-sm">{result.brief.summary}</p>
             <p className="text-sm">
