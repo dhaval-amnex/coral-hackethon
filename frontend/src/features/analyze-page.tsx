@@ -91,7 +91,7 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
 
   return (
     <div className="grid gap-4">
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Analyze Incident</CardTitle>
         </CardHeader>
@@ -108,14 +108,15 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
             <Label htmlFor="repo">GitHub Repo</Label>
             <Input id="repo" value={repo} onChange={(e) => setRepo(e.target.value)} />
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <Button onClick={runAnalysis} disabled={loading || !incidentId.trim()}>
               {loading ? "Running..." : "Run Analysis"}
             </Button>
+            <Badge variant="outline">{jobStatus}</Badge>
           </div>
           {error && <p className="text-sm text-destructive md:col-span-2">{error}</p>}
           {loading && (
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 rounded-lg border p-3">
               <p className="mb-2 text-xs text-muted-foreground">Progress</p>
               <ol className="grid gap-1 text-xs">
                 <li>1. queued {jobStatus === "queued" || jobStatus === "running" || jobStatus === "done" ? "[x]" : "[ ]"}</li>
@@ -128,13 +129,31 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
       </Card>
 
       {result && (
-        <Card>
+        <Card className="rounded-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Result <Badge>{result.brief.confidence}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
+            <div className="grid gap-2 md:grid-cols-4">
+              <div className="rounded-lg border p-2 text-xs">
+                <p className="text-muted-foreground">Evidence</p>
+                <p className="font-semibold">{result.brief.evidence.length}</p>
+              </div>
+              <div className="rounded-lg border p-2 text-xs">
+                <p className="text-muted-foreground">Services</p>
+                <p className="font-semibold">{result.brief.impacted_services.length}</p>
+              </div>
+              <div className="rounded-lg border p-2 text-xs">
+                <p className="text-muted-foreground">Owners</p>
+                <p className="font-semibold">{result.brief.owners.length}</p>
+              </div>
+              <div className="rounded-lg border p-2 text-xs">
+                <p className="text-muted-foreground">Duration</p>
+                <p className="font-semibold">{result.total_duration_ms}ms</p>
+              </div>
+            </div>
             <p className="text-sm">{result.brief.summary}</p>
             <p className="text-sm">
               <strong>Root cause:</strong> {result.brief.probable_root_cause}
