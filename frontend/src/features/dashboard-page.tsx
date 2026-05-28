@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import type { ArtifactsStatusResponse } from "@/lib/types"
-import { getArtifactDownloadUrl } from "@/lib/api"
+import type { ArtifactsStatusResponse, ReadinessResponse } from "@/lib/types"
+import { getArtifactDownloadUrl, getReadiness } from "@/lib/api"
 
 interface DashboardPageProps {
   activeIncidentId: string
@@ -30,9 +32,38 @@ export function DashboardPage({
 }: DashboardPageProps) {
   const artifactEntries = artifactsStatus ? Object.entries(artifactsStatus.artifacts) : []
   const doneCount = presenterChecklist.filter((x) => x.done).length
+  const [readiness, setReadiness] = useState<ReadinessResponse | null>(null)
+
+  useEffect(() => {
+    getReadiness()
+      .then((payload) => setReadiness(payload))
+      .catch(() => setReadiness(null))
+  }, [])
+
+  const release = readiness?.release_check
+  const blockers = release?.live_blockers ?? []
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
+      <Card className="md:col-span-2 rounded-2xl border-2 shadow-sm">
+        <CardHeader>
+          <CardTitle>Live Readiness Score</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm md:grid-cols-4">
+          <p>
+            Score: <strong>{release?.scorecard_overall ?? "n/a"}</strong>
+          </p>
+          <p>
+            Submission: <strong>{String(release?.go_for_submission ?? false)}</strong>
+          </p>
+          <p>
+            Live: <strong>{String(release?.go_for_live_submission ?? false)}</strong>
+          </p>
+          <p>
+            Blockers: <strong>{blockers.length}</strong>
+          </p>
+        </CardContent>
+      </Card>
       <Card className="rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle>Mission Control</CardTitle>
@@ -103,6 +134,13 @@ export function DashboardPage({
                   </li>
                 ))}
               </ol>
+              <div className="mt-2 rounded-xl border bg-muted/30 p-3 text-xs">
+                <p className="font-medium">Demo Script (2 minutes)</p>
+                <p>1. We unify PagerDuty, GitHub, Datadog, Slack evidence in one run.</p>
+                <p>2. We show confidence, root-cause hints, and source-aware diagnostics.</p>
+                <p>3. We run ship-readiness to produce a go/no-go submission signal.</p>
+                <p>4. We generate judge pack artifacts for submission in one click.</p>
+              </div>
             </div>
           ) : null}
           <div className="grid gap-1">

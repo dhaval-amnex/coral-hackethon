@@ -93,6 +93,9 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
   const queryDiagnostics = result?.brief.diagnostics?.queries as
     | Record<string, { rows?: number; duration_ms?: number; attempts?: number; row_quality_score?: number }>
     | undefined
+  const queryErrorCategories = result?.brief.diagnostics?.query_error_categories as
+    | Record<string, string>
+    | undefined
   const coverageDiagnostics = result?.brief.diagnostics?.coverage as
     | { score?: number; max_score?: number; missing_families?: string[]; source_availability_influence?: number }
     | undefined
@@ -219,6 +222,18 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
                       <p key={name}>
                         {name}: rows={q.rows ?? 0}, ms={q.duration_ms ?? 0}, attempts={q.attempts ?? 1}, quality={q.row_quality_score ?? 0}
                       </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {queryErrorCategories && Object.keys(queryErrorCategories).length > 0 ? (
+                <div className="rounded-lg border p-2 text-xs">
+                  <p className="mb-2 font-medium">Query Error Categories</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(queryErrorCategories).map(([name, category]) => (
+                      <Badge key={name} variant="outline">
+                        {name}:{category}
+                      </Badge>
                     ))}
                   </div>
                 </div>
