@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+from contextlib import contextmanager
 
 from .config import validate_source_env
 from .coral import CoralClient, CoralError, find_coral_bin, load_env_file
@@ -79,6 +80,48 @@ def _build_coral(payload: dict[str, Any]) -> CoralClient:
         retries=int(payload.get("coral_retries") or 2),
         backoff_sec=float(payload.get("coral_backoff_sec") or 0.5),
     )
+
+
+@contextmanager
+def _aligned_quality_inputs(
+    *,
+    metrics_log: Path,
+    workflow_log: Path,
+    output_dir: Path,
+) -> Any:
+    """
+    Make quality-gate checks read the same run artifacts used by this API call.
+    We temporarily mirror configured paths to output/run_metrics.jsonl and
+    output/workflow_log.json because run_quality_gate currently checks fixed names.
+    """
+    canonical_metrics = output_dir / "run_metrics.jsonl"
+    canonical_workflow = output_dir / "workflow_log.json"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    prev_metrics: str | None = None
+    prev_workflow: str | None = None
+    if canonical_metrics.exists():
+        prev_metrics = canonical_metrics.read_text(encoding="utf-8")
+    if canonical_workflow.exists():
+        prev_workflow = canonical_workflow.read_text(encoding="utf-8")
+
+    try:
+        if metrics_log.exists():
+            canonical_metrics.write_text(metrics_log.read_text(encoding="utf-8"), encoding="utf-8")
+        if workflow_log.exists():
+            canonical_workflow.write_text(workflow_log.read_text(encoding="utf-8"), encoding="utf-8")
+        yield
+    finally:
+        if prev_metrics is None:
+            if canonical_metrics.exists():
+                canonical_metrics.unlink()
+        else:
+            canonical_metrics.write_text(prev_metrics, encoding="utf-8")
+        if prev_workflow is None:
+            if canonical_workflow.exists():
+                canonical_workflow.unlink()
+        else:
+            canonical_workflow.write_text(prev_workflow, encoding="utf-8")
 
 
 _JOBS_LOCK = threading.Lock()
@@ -403,6 +446,7 @@ class _Handler(BaseHTTPRequestHandler):
             raise CoralError("incident_id is required", category="config")
 
         metrics_log = Path(str(payload.get("metrics_log") or "output/run_metrics.jsonl"))
+        workflow_log = Path(str(payload.get("workflow_log") or "output/workflow_log.json"))
         recent_runs = int(payload.get("recent_runs") or 0)
         min_success_rate = float(payload.get("min_success_rate") or 0.7)
         min_improvement_percent = float(payload.get("min_improvement_percent") or 10.0)
@@ -416,13 +460,14 @@ class _Handler(BaseHTTPRequestHandler):
             report_dir / "demo_report.md",
             recent_runs=recent_runs,
         )
-        quality = run_quality_gate(
-            incident_id=incident_id,
-            output_dir=output_dir,
-            report_dir=report_dir,
-            min_success_rate=min_success_rate,
-            min_improvement_percent=min_improvement_percent,
-        )
+        with _aligned_quality_inputs(metrics_log=metrics_log, workflow_log=workflow_log, output_dir=output_dir):
+            quality = run_quality_gate(
+                incident_id=incident_id,
+                output_dir=output_dir,
+                report_dir=report_dir,
+                min_success_rate=min_success_rate,
+                min_improvement_percent=min_improvement_percent,
+            )
         (report_dir / "quality_gate.json").write_text(json.dumps(quality, indent=2), encoding="utf-8")
         scorecard = write_scorecard(
             report_dir=report_dir,
