@@ -30,6 +30,30 @@ def test_compose_brief_high_confidence() -> None:
     assert len(brief.evidence) >= 1
     assert brief.impacted_services
     assert len(brief.executive_summary) == 6
+    assert "coverage" in brief.diagnostics
+
+
+def test_compose_brief_missing_families_reduces_confidence() -> None:
+    runs = [
+        QueryRun(
+            name="telemetry_context",
+            duration_ms=80,
+            rows=[
+                {
+                    "metric_name": "cpu_usage",
+                    "value": 93.2,
+                    "timestamp": "2026-05-28T10:00:00Z",
+                    "service": "checkout",
+                }
+            ],
+        )
+    ]
+    brief = compose_brief("INC-9", runs, [])
+    assert brief.confidence == "low"
+    assert "coverage" in brief.diagnostics
+    coverage = brief.diagnostics["coverage"]
+    assert isinstance(coverage, dict)
+    assert coverage["score"] <= 1
 
 
 def test_compose_brief_low_confidence_when_no_data() -> None:

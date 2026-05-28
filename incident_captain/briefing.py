@@ -128,6 +128,58 @@ def _confidence(num_query_failures: int, evidence_count: int) -> str:
     return "high"
 
 
+def _extract_failed_query_names(errors: list[str]) -> set[str]:
+    failed: set[str] = set()
+    for err in errors:
+        if ":" in err:
+            failed.add(err.split(":", 1)[0].strip())
+    return failed
+
+
+def _coverage_quality(
+    runs: list[QueryRun],
+    errors: list[str],
+) -> tuple[int, list[str], dict[str, bool]]:
+    """
+    Score functional evidence-family coverage so confidence reflects partial-source fallbacks.
+    """
+    expected_families = {
+        "incident": {"active_incidents"},
+        "deploy": {"deploy_correlation"},
+        "telemetry": {"telemetry_context"},
+        "comms": {"team_comms"},
+    }
+    run_names = {r.name for r in runs}
+    failed_names = _extract_failed_query_names(errors)
+    if "final_dataset" in run_names and "final_dataset" not in failed_names:
+        family_ok_all = {"incident": True, "deploy": True, "telemetry": True, "comms": True}
+        return 4, [], family_ok_all
+    family_ok: dict[str, bool] = {}
+    missing_families: list[str] = []
+    for family, query_names in expected_families.items():
+        ok = any(q in run_names for q in query_names) and not any(q in failed_names for q in query_names)
+        family_ok[family] = ok
+        if not ok:
+            missing_families.append(family)
+    return sum(1 for v in family_ok.values() if v), missing_families, family_ok
+
+
+def _confidence_with_coverage(
+    num_query_failures: int,
+    evidence_count: int,
+    coverage_score: int,
+) -> str:
+    base = _confidence(num_query_failures, evidence_count)
+    # 4 families = full coverage. Penalize confidence for missing families.
+    if coverage_score <= 1:
+        return "low"
+    if coverage_score == 2 and base == "high":
+        return "medium"
+    if coverage_score == 3 and base == "high" and evidence_count < 4:
+        return "medium"
+    return base
+
+
 def _make_executive_summary(
     incident_id: str,
     confidence: str,
@@ -215,7 +267,8 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
             )
 
     evidence = evidence[:10]
-    confidence = _confidence(len(errors), len(evidence))
+    coverage_score, missing_families, family_ok = _coverage_quality(runs, errors)
+    confidence = _confidence_with_coverage(len(errors), len(evidence), coverage_score)
     cause = "Recent deployment likely triggered service degradation."
     if not evidence:
         cause = "Insufficient evidence from data sources; validate source connections and rerun."
@@ -233,6 +286,15 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
     ]
     if errors:
         actions.append("Fix failing source queries to improve confidence and coverage.")
+    if missing_families:
+        actions.append(f"Restore missing evidence families: {', '.join(missing_families)}.")
+
+    diagnostics["coverage"] = {
+        "score": coverage_score,
+        "max_score": 4,
+        "missing_families": missing_families,
+        "families": family_ok,
+    }
 
     executive_summary = _make_executive_summary(
         incident_id=incident_id,
