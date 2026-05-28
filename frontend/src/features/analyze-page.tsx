@@ -89,6 +89,15 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
     return () => clearInterval(timer)
   }, [jobId, onAnalyzed])
 
+  const queryDiagnostics = result?.brief.diagnostics?.queries as
+    | Record<string, { rows?: number; duration_ms?: number; attempts?: number; row_quality_score?: number }>
+    | undefined
+  const coverageDiagnostics = result?.brief.diagnostics?.coverage as
+    | { score?: number; max_score?: number; missing_families?: string[]; source_availability_influence?: number }
+    | undefined
+  const discoverStep = result?.workflow_log.find((step) => String(step.step) === "discover_catalog")
+  const queryPlan = (discoverStep?.detail as { query_plan?: Record<string, { enabled?: boolean; missing_tables?: string[]; missing_vars?: string[] }> } | undefined)?.query_plan
+
   return (
     <div className="grid gap-4">
       <Card className="rounded-xl">
@@ -181,6 +190,40 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
                 Query errors:{" "}
                 {Array.isArray(result.brief.diagnostics?.errors) ? String(result.brief.diagnostics.errors.length) : "0"}
               </p>
+              {coverageDiagnostics ? (
+                <p className="text-xs text-muted-foreground">
+                  Coverage: {coverageDiagnostics.score ?? 0}/{coverageDiagnostics.max_score ?? 4}
+                  {" | "}
+                  Source influence: {coverageDiagnostics.source_availability_influence ?? 0}%
+                </p>
+              ) : null}
+              {queryDiagnostics ? (
+                <div className="rounded-lg border p-2 text-xs">
+                  <p className="mb-1 font-medium">Query Telemetry</p>
+                  <div className="grid gap-1">
+                    {Object.entries(queryDiagnostics).map(([name, q]) => (
+                      <p key={name}>
+                        {name}: rows={q.rows ?? 0}, ms={q.duration_ms ?? 0}, attempts={q.attempts ?? 1}, quality={q.row_quality_score ?? 0}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {queryPlan ? (
+                <div className="rounded-lg border p-2 text-xs">
+                  <p className="mb-1 font-medium">Catalog Query Plan</p>
+                  <div className="grid gap-1">
+                    {Object.entries(queryPlan).map(([name, p]) => (
+                      <p key={name}>
+                        {name}: {p.enabled ? "enabled" : "disabled"}
+                        {!p.enabled && (p.missing_tables?.length || p.missing_vars?.length)
+                          ? ` (missing tables: ${(p.missing_tables ?? []).join(", ") || "none"}; missing vars: ${(p.missing_vars ?? []).join(", ") || "none"})`
+                          : ""}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>
