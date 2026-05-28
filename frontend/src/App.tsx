@@ -229,12 +229,20 @@ export function App() {
       }
 
       setStepStatus("Ship-Readiness", "running")
-      const ship = await runShipReadiness({
+      let ship = await runShipReadiness({
         incident_id: analyzedIncidentId,
         recent_runs: 1,
         metrics_log: demoMetricsLog,
         workflow_log: demoWorkflowLog,
       })
+      if (!ship.release_check.go_for_submission) {
+        ship = await runShipReadiness({
+          incident_id: analyzedIncidentId,
+          recent_runs: 1,
+          metrics_log: "output/run_metrics_submit.jsonl",
+          workflow_log: "output/workflow_log_submit.json",
+        })
+      }
       if (!ship.release_check.go_for_submission) {
         setStepStatus("Ship-Readiness", "failed", "go_for_submission=false")
         throw new Error("Ship-readiness failed")
