@@ -262,7 +262,7 @@ export function App() {
   return (
     <div className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(0,0,0,0.04),_transparent_35%),linear-gradient(to_bottom,_transparent,_rgba(0,0,0,0.03))] text-foreground">
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-4 p-4 md:grid-cols-[240px_1fr]">
-        <aside className="rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+        <aside className="rounded-2xl border bg-card/95 p-4 shadow-sm backdrop-blur">
           <h1 className="font-heading text-lg tracking-wide">Incident Captain</h1>
           <p className="mb-4 text-xs text-muted-foreground">Enterprise Command Center</p>
           <div className="grid gap-2">
@@ -270,7 +270,7 @@ export function App() {
               <Button
                 key={item.id}
                 variant={section === item.id ? "default" : "outline"}
-                className="justify-start rounded-lg"
+                className="justify-start rounded-xl"
                 onClick={() => navigateTo(item.id)}
               >
                 {item.label}
@@ -279,7 +279,7 @@ export function App() {
           </div>
         </aside>
         <main className="grid gap-4">
-          <header className="flex flex-wrap items-center gap-2 rounded-xl border bg-card/95 p-3 text-sm shadow-sm backdrop-blur">
+          <header className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card/95 p-3 text-sm shadow-sm backdrop-blur">
             <Badge variant="outline">API: http://127.0.0.1:8787</Badge>
             <Badge>{activeIncidentId}</Badge>
             {Object.entries(sourceHealth).map(([name, state]) => (

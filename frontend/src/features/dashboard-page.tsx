@@ -33,7 +33,7 @@ export function DashboardPage({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card className="rounded-xl">
+      <Card className="rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle>Mission Control</CardTitle>
         </CardHeader>
@@ -44,7 +44,7 @@ export function DashboardPage({
           </p>
         </CardContent>
       </Card>
-      <Card className="rounded-xl">
+      <Card className="rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
@@ -56,7 +56,7 @@ export function DashboardPage({
           </ul>
         </CardContent>
       </Card>
-      <Card className="md:col-span-2 rounded-xl">
+      <Card className="md:col-span-2 rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle>Demo Runbook ({doneCount}/{presenterChecklist.length} ready)</CardTitle>
         </CardHeader>
@@ -76,10 +76,10 @@ export function DashboardPage({
             <li>4. Generate artifacts and judge pack download.</li>
           </ol>
           <div className="flex flex-wrap gap-2">
-            <Button variant="default" onClick={() => void onRunFullDemo()} disabled={demoRunning}>
+            <Button variant="default" className="rounded-xl px-5 font-semibold" onClick={() => void onRunFullDemo()} disabled={demoRunning}>
               {demoRunning ? "Running Full Demo..." : "Start Full Demo"}
             </Button>
-            <Button onClick={() => onNavigate("analyze")}>Go to Analyze</Button>
+            <Button className="rounded-xl" onClick={() => onNavigate("analyze")}>Go to Analyze</Button>
             <Button variant="outline" onClick={() => onNavigate("evidence")}>
               Go to Evidence
             </Button>

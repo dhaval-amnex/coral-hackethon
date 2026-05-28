@@ -57,7 +57,7 @@ export function SubmissionPage() {
 
   return (
     <div className="grid gap-4">
-      <Card className="rounded-xl">
+      <Card className="rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle>Submission Console</CardTitle>
         </CardHeader>
@@ -79,7 +79,7 @@ export function SubmissionPage() {
             <Input id="submission-score" value={minScore} onChange={(e) => setMinScore(e.target.value)} />
           </div>
           <div className="md:col-span-4 flex flex-wrap gap-2">
-            <Button onClick={runChecks} disabled={running || !incidentId.trim()}>
+            <Button className="rounded-xl px-5 font-semibold" onClick={runChecks} disabled={running || !incidentId.trim()}>
               {running ? "Running..." : "Run Release Check"}
             </Button>
             <Button variant="outline" onClick={runJudgePack} disabled={running}>
@@ -91,7 +91,7 @@ export function SubmissionPage() {
       </Card>
 
       {release ? (
-        <Card className="rounded-xl">
+        <Card className="rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle>Submission Decision</CardTitle>
           </CardHeader>
@@ -128,7 +128,7 @@ export function SubmissionPage() {
         </Card>
       ) : null}
 
-      <Card className="rounded-xl">
+      <Card className="rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle>Artifacts</CardTitle>
         </CardHeader>
