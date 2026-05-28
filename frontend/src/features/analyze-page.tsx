@@ -45,6 +45,7 @@ export function AnalyzePage({ onAnalyzed }: AnalyzePageProps) {
     try {
       const start = await analyzeIncidentStart({
         incident_id: incidentId.trim(),
+        planner_mode: "mcp",
         github_owner: normalizeOwner(owner),
         github_repo: normalizeRepo(repo),
       })

@@ -32,6 +32,7 @@ def run_deterministic_workflow(
     incident_id: str,
     sql_dir: Path,
     extra_vars: dict[str, str] | None = None,
+    planner_mode: str = "sql",
 ) -> WorkflowResult:
     started = time.perf_counter()
     workflow_log: list[dict[str, Any]] = []
@@ -85,6 +86,37 @@ def run_deterministic_workflow(
             "duration_ms": int((time.perf_counter() - step_start) * 1000),
         }
     )
+
+    if planner_mode == "mcp":
+        step_start = time.perf_counter()
+        catalog_loop: dict[str, Any] = {"schemas": {}, "top_tables": [], "filter_requirements": []}
+        try:
+            schemas_rows, _ = coral.run_sql(
+                "SELECT schema_name, COUNT(*) AS table_count FROM coral.tables GROUP BY schema_name ORDER BY table_count DESC"
+            )
+            for row in schemas_rows[:8]:
+                schema = str(row.get("schema_name") or "")
+                catalog_loop["schemas"][schema] = int(row.get("table_count") or 0)
+            top_rows, _ = coral.run_sql(
+                "SELECT schema_name, table_name FROM coral.tables ORDER BY schema_name, table_name LIMIT 20"
+            )
+            catalog_loop["top_tables"] = top_rows
+            filter_rows, _ = coral.run_sql(
+                "SELECT schema_name, table_name, filter_name, required FROM coral.filters WHERE required = true ORDER BY schema_name, table_name, filter_name LIMIT 30"
+            )
+            catalog_loop["filter_requirements"] = filter_rows
+            status = "ok"
+        except Exception as exc:
+            status = "partial"
+            catalog_loop["error"] = str(exc)
+        workflow_log.append(
+            {
+                "step": "mcp_catalog_loop",
+                "status": status,
+                "detail": catalog_loop,
+                "duration_ms": int((time.perf_counter() - step_start) * 1000),
+            }
+        )
 
     step_start = time.perf_counter()
     runs, errors = run_incident_queries(

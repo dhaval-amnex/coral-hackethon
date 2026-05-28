@@ -349,6 +349,7 @@ class _Handler(BaseHTTPRequestHandler):
             incident_id=incident_id,
             sql_dir=sql_dir,
             extra_vars=extra_vars or None,
+            planner_mode=str(payload.get("planner_mode") or "sql"),
         )
         brief = workflow.brief
         (output_dir / f"{incident_id}.json").write_text(json.dumps(brief.to_dict(), indent=2), encoding="utf-8")
@@ -409,6 +410,7 @@ class _Handler(BaseHTTPRequestHandler):
                     incident_id=incident_id,
                     sql_dir=sql_dir,
                     extra_vars=extra_vars or None,
+                    planner_mode=str(payload.get("planner_mode") or "sql"),
                 )
                 brief = workflow.brief
                 (output_dir / f"{incident_id}.json").write_text(json.dumps(brief.to_dict(), indent=2), encoding="utf-8")

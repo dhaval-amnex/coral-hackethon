@@ -54,6 +54,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=".env",
         help="Path to .env file with API credentials (loaded before live queries).",
     )
+    common.add_argument(
+        "--planner-mode",
+        choices=["sql", "mcp"],
+        default="sql",
+        help="Planner mode: sql (default) or mcp-style catalog loop.",
+    )
 
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -360,6 +366,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         incident_id=args.incident_id,
         sql_dir=sql_dir,
         extra_vars=extra_vars or None,
+        planner_mode=getattr(args, "planner_mode", "sql"),
     )
     brief = workflow.brief
 
