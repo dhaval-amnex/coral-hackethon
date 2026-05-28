@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { generateJudgePack, getArtifactDownloadUrl, getArtifactsStatus, runShipReadiness } from "@/lib/api"
 import type { ArtifactsStatusResponse, ShipReadinessResponse } from "@/lib/types"
 
@@ -56,7 +57,7 @@ export function SubmissionPage() {
 
   return (
     <div className="grid gap-4">
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Submission Console</CardTitle>
         </CardHeader>
@@ -90,24 +91,44 @@ export function SubmissionPage() {
       </Card>
 
       {release ? (
-        <Card>
+        <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>Submission Decision</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 text-sm">
-            <p>Go for submission: {String(release.go_for_submission)}</p>
-            <p>Go for live submission: {String(release.go_for_live_submission)}</p>
+            <p>
+              Go for submission:{" "}
+              <Badge variant={release.go_for_submission ? "default" : "destructive"}>
+                {String(release.go_for_submission)}
+              </Badge>
+            </p>
+            <p>
+              Go for live submission:{" "}
+              <Badge variant={release.go_for_live_submission ? "default" : "destructive"}>
+                {String(release.go_for_live_submission)}
+              </Badge>
+            </p>
             <p>Scorecard overall: {release.scorecard_overall}</p>
             <p>Progress: {release.progress_percent}%</p>
-            <p>Quality gate passed: {String(release.quality_gate_passed)}</p>
-            <p>Live readiness: {String(release.live_readiness)}</p>
+            <p>
+              Quality gate passed:{" "}
+              <Badge variant={release.quality_gate_passed ? "default" : "destructive"}>
+                {String(release.quality_gate_passed)}
+              </Badge>
+            </p>
+            <p>
+              Live readiness:{" "}
+              <Badge variant={release.live_readiness ? "default" : "destructive"}>
+                {String(release.live_readiness)}
+              </Badge>
+            </p>
             <p>Live blockers: {release.live_blockers.length > 0 ? release.live_blockers.join(", ") : "none"}</p>
             <p>Next actions: {release.next_actions.join(", ")}</p>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Artifacts</CardTitle>
         </CardHeader>
@@ -138,4 +159,3 @@ export function SubmissionPage() {
     </div>
   )
 }
-

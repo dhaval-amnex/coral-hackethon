@@ -29,10 +29,11 @@ export function DashboardPage({
   presenterChecklist,
 }: DashboardPageProps) {
   const artifactEntries = artifactsStatus ? Object.entries(artifactsStatus.artifacts) : []
+  const doneCount = presenterChecklist.filter((x) => x.done).length
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Mission Control</CardTitle>
         </CardHeader>
@@ -43,7 +44,7 @@ export function DashboardPage({
           </p>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
@@ -55,9 +56,9 @@ export function DashboardPage({
           </ul>
         </CardContent>
       </Card>
-      <Card className="md:col-span-2">
+      <Card className="md:col-span-2 rounded-xl">
         <CardHeader>
-          <CardTitle>Demo Runbook</CardTitle>
+          <CardTitle>Demo Runbook ({doneCount}/{presenterChecklist.length} ready)</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 text-sm">
           <div className="flex flex-wrap items-center gap-2">
@@ -97,7 +98,7 @@ export function DashboardPage({
               <p className="font-medium">Presenter Checklist</p>
               <ol className="grid gap-1 text-xs">
                 {presenterChecklist.map((item) => (
-                  <li key={item.name}>
+                  <li key={item.name} className={item.done ? "text-green-700" : "text-amber-700"}>
                     {item.done ? "done" : "pending"}: {item.name}
                   </li>
                 ))}
@@ -108,7 +109,18 @@ export function DashboardPage({
             <p className="font-medium">Demo Step Status</p>
             <ol className="grid gap-1 text-xs">
               {demoSteps.map((s) => (
-                <li key={s.name}>
+                <li
+                  key={s.name}
+                  className={
+                    s.status === "done"
+                      ? "text-green-700"
+                      : s.status === "failed"
+                        ? "text-red-700"
+                        : s.status === "running"
+                          ? "text-blue-700"
+                          : "text-muted-foreground"
+                  }
+                >
                   {s.name}: {s.status}
                   {s.detail ? ` (${s.detail})` : ""}
                 </li>

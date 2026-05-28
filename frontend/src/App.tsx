@@ -33,6 +33,13 @@ const NAV: Array<{ id: Section; label: string }> = [
   { id: "history", label: "Run History" },
 ]
 
+function statusVariant(state: string): "default" | "destructive" | "outline" | "secondary" {
+  if (state === "ok" || state === "done") return "default"
+  if (state === "failed") return "destructive"
+  if (state === "running") return "secondary"
+  return "outline"
+}
+
 export function App() {
   const [section, setSection] = useState<Section>("dashboard")
   const [activeIncidentId, setActiveIncidentId] = useState("INC-1001")
@@ -253,17 +260,17 @@ export function App() {
   }
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-4 p-4 md:grid-cols-[220px_1fr]">
-        <aside className="rounded-lg border bg-card p-3">
-          <h1 className="font-heading text-lg">Incident Captain</h1>
-          <p className="mb-4 text-xs text-muted-foreground">Command Center</p>
+    <div className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(0,0,0,0.04),_transparent_35%),linear-gradient(to_bottom,_transparent,_rgba(0,0,0,0.03))] text-foreground">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-4 p-4 md:grid-cols-[240px_1fr]">
+        <aside className="rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+          <h1 className="font-heading text-lg tracking-wide">Incident Captain</h1>
+          <p className="mb-4 text-xs text-muted-foreground">Enterprise Command Center</p>
           <div className="grid gap-2">
             {NAV.map((item) => (
               <Button
                 key={item.id}
                 variant={section === item.id ? "default" : "outline"}
-                className="justify-start"
+                className="justify-start rounded-lg"
                 onClick={() => navigateTo(item.id)}
               >
                 {item.label}
@@ -272,11 +279,11 @@ export function App() {
           </div>
         </aside>
         <main className="grid gap-4">
-          <header className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 text-sm">
+          <header className="flex flex-wrap items-center gap-2 rounded-xl border bg-card/95 p-3 text-sm shadow-sm backdrop-blur">
             <Badge variant="outline">API: http://127.0.0.1:8787</Badge>
             <Badge>{activeIncidentId}</Badge>
             {Object.entries(sourceHealth).map(([name, state]) => (
-              <Badge key={name} variant={state === "ok" ? "default" : "destructive"}>
+              <Badge key={name} variant={statusVariant(state)}>
                 {name}:{state}
               </Badge>
             ))}
@@ -288,7 +295,7 @@ export function App() {
             <Badge variant="outline">health: {lastHealthRefreshAt || "..."}</Badge>
             <Badge variant="outline">artifacts: {lastArtifactsRefreshAt || "..."}</Badge>
             {activityFeed.length > 0 ? (
-              <Badge variant="outline">activity: {activityFeed[0]}</Badge>
+              <Badge variant="secondary">activity: {activityFeed[0]}</Badge>
             ) : null}
           </header>
           {renderSection()}
