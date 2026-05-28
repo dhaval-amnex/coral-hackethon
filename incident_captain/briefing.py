@@ -20,6 +20,10 @@ QUERY_FILES = [
 QUERY_REQUIRED_VARS: dict[str, list[str]] = {
     "deploy_correlation": ["GITHUB_OWNER", "GITHUB_REPO"],
 }
+WINDOW_OPTIMIZED_QUERIES = {"deploy_correlation", "telemetry_context"}
+NARROW_WINDOW_HOURS = 2
+WIDE_WINDOW_HOURS = 24
+MIN_ROWS_BEFORE_WIDEN = 3
 
 # Preferred table references and fallback candidates discovered from coral.tables.
 TABLE_CANDIDATES: dict[str, list[str]] = {
@@ -102,21 +106,38 @@ def run_incident_queries(
         if not path.exists():
             errors.append(f"missing SQL template: {file_name}")
             continue
-        sql = render_sql_from_template(path, template_vars)
+        base_vars = dict(template_vars)
+        base_vars.setdefault("WINDOW_HOURS", str(NARROW_WINDOW_HOURS))
+        sql = render_sql_from_template(path, base_vars)
         sql = apply_table_aliases(sql, table_aliases)
-        try:
+
+        def _exec(sql_text: str) -> tuple[list[dict[str, Any]], int, int]:
             if hasattr(coral, "run_sql_with_meta"):
-                rows, duration_ms, meta = coral.run_sql_with_meta(sql)  # type: ignore[attr-defined]
-                attempts = int(meta.get("attempts", 1))
-            else:
-                rows, duration_ms = coral.run_sql(sql)
-                attempts = 1
+                rows, duration_ms, meta = coral.run_sql_with_meta(sql_text)  # type: ignore[attr-defined]
+                return rows, duration_ms, int(meta.get("attempts", 1))
+            rows, duration_ms = coral.run_sql(sql_text)
+            return rows, duration_ms, 1
+
+        try:
+            rows, duration_ms, attempts = _exec(sql)
+            used_window = int(base_vars.get("WINDOW_HOURS", "0")) if name in WINDOW_OPTIMIZED_QUERIES else None
+
+            if name in WINDOW_OPTIMIZED_QUERIES and len(rows) < MIN_ROWS_BEFORE_WIDEN:
+                wide_vars = dict(template_vars)
+                wide_vars["WINDOW_HOURS"] = str(WIDE_WINDOW_HOURS)
+                sql_wide = apply_table_aliases(render_sql_from_template(path, wide_vars), table_aliases)
+                rows_wide, duration_ms_wide, attempts_wide = _exec(sql_wide)
+                if len(rows_wide) > len(rows):
+                    rows, duration_ms, attempts = rows_wide, duration_ms_wide, attempts_wide
+                    used_window = WIDE_WINDOW_HOURS
+
             runs.append(
                 QueryRun(
                     name=name,
                     rows=rows,
                     duration_ms=duration_ms,
                     attempts=attempts,
+                    window_hours=used_window,
                 )
             )
         except CoralError as exc:
@@ -244,6 +265,7 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
             "duration_ms": run.duration_ms,
             "attempts": run.attempts,
             "row_quality_score": run.row_quality_score,
+            "window_hours": run.window_hours,
         }
         all_rows.extend(run.rows)
 

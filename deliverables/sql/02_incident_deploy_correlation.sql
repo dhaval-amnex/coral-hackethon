@@ -8,5 +8,6 @@ SELECT
 FROM github.repo_deployments d
 WHERE d.owner = '{{GITHUB_OWNER}}'
   AND d.repo = '{{GITHUB_REPO}}'
+  AND d.created_at >= now() - interval '{{WINDOW_HOURS}} hour'
 ORDER BY d.created_at DESC
 LIMIT 20;

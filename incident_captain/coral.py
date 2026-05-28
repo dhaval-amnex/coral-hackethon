@@ -74,6 +74,7 @@ class QueryRun:
     duration_ms: int
     attempts: int = 1
     row_quality_score: float = 0.0
+    window_hours: int | None = None
 
 
 class CoralClient:

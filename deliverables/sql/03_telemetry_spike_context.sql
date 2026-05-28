@@ -10,5 +10,6 @@ SELECT
   m.modified AS timestamp
 FROM datadog.monitors m
 WHERE m.status IN ('Alert', 'Warn', 'No Data')
+  AND m.modified >= now() - interval '{{WINDOW_HOURS}} hour'
 ORDER BY m.modified DESC
 LIMIT 30;
