@@ -56,9 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     common.add_argument(
         "--planner-mode",
-        choices=["sql", "mcp"],
+        choices=["sql", "mcp", "mcp_native"],
         default="sql",
-        help="Planner mode: sql (default) or mcp-style catalog loop.",
+        help="Planner mode: sql (default), mcp (SQL-backed loop), or mcp_native (capability-detected MCP loop).",
     )
 
     sub = parser.add_subparsers(dest="command", required=True)

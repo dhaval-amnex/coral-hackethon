@@ -197,7 +197,7 @@ export function App() {
       const demoWorkflowLog = "output/workflow_log_live_clean.json"
       const start = await analyzeIncidentStart({
         incident_id: activeIncidentId || "INC-1001",
-        planner_mode: "mcp",
+        planner_mode: "mcp_native",
         github_owner: "dhaval-amnex",
         github_repo: "coral-hackethon",
         metrics_log: demoMetricsLog,

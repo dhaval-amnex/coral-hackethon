@@ -26,6 +26,68 @@ class WorkflowResult:
     total_duration_ms: int
 
 
+def _mcp_catalog_loop(coral: CoralClient) -> tuple[str, dict[str, Any]]:
+    detail: dict[str, Any] = {
+        "mode": "mcp_native",
+        "capabilities": {
+            "list_catalog": hasattr(coral, "list_catalog"),
+            "search_catalog": hasattr(coral, "search_catalog"),
+            "describe_table": hasattr(coral, "describe_table"),
+            "list_columns": hasattr(coral, "list_columns"),
+        },
+        "schemas": {},
+        "top_tables": [],
+        "filter_requirements": [],
+    }
+    has_all = all(bool(v) for v in detail["capabilities"].values())
+    if has_all:
+        try:
+            # Best-effort dynamic MCP calls if available on the Coral client wrapper.
+            list_catalog = getattr(coral, "list_catalog")
+            search_catalog = getattr(coral, "search_catalog")
+            list_columns = getattr(coral, "list_columns")
+            catalog_rows = list_catalog()  # type: ignore[misc]
+            for row in catalog_rows[:8]:
+                schema = str(row.get("schema_name") or "")
+                detail["schemas"][schema] = int(row.get("table_count") or 0)
+            detail["top_tables"] = search_catalog("incidents deployments monitors slack users", limit=20)  # type: ignore[misc]
+            # Use top table candidates to list columns.
+            for table_row in detail["top_tables"][:5]:
+                schema = str(table_row.get("schema_name") or "")
+                table = str(table_row.get("table_name") or "")
+                if not (schema and table):
+                    continue
+                cols = list_columns(schema, table)  # type: ignore[misc]
+                required_like = [c for c in cols if bool(c.get("required"))]
+                detail["filter_requirements"].extend(required_like[:10])
+            return "ok", detail
+        except Exception as exc:
+            detail["error"] = str(exc)
+            detail["fallback"] = "sql_catalog_loop"
+
+    # Fallback path keeps runs robust even without MCP methods on client.
+    try:
+        schemas_rows, _ = coral.run_sql(
+            "SELECT schema_name, COUNT(*) AS table_count FROM coral.tables GROUP BY schema_name ORDER BY table_count DESC"
+        )
+        for row in schemas_rows[:8]:
+            schema = str(row.get("schema_name") or "")
+            detail["schemas"][schema] = int(row.get("table_count") or 0)
+        top_rows, _ = coral.run_sql(
+            "SELECT schema_name, table_name FROM coral.tables ORDER BY schema_name, table_name LIMIT 20"
+        )
+        detail["top_tables"] = top_rows
+        filter_rows, _ = coral.run_sql(
+            "SELECT schema_name, table_name, filter_name, required FROM coral.filters WHERE required = true ORDER BY schema_name, table_name, filter_name LIMIT 30"
+        )
+        detail["filter_requirements"] = filter_rows
+        detail["mode"] = "mcp_native_fallback_sql"
+        return "ok", detail
+    except Exception as exc:
+        detail["error"] = str(exc)
+        return "partial", detail
+
+
 def run_deterministic_workflow(
     *,
     coral: CoralClient,
@@ -87,31 +149,36 @@ def run_deterministic_workflow(
         }
     )
 
-    if planner_mode == "mcp":
+    if planner_mode in {"mcp", "mcp_native"}:
         step_start = time.perf_counter()
-        catalog_loop: dict[str, Any] = {"schemas": {}, "top_tables": [], "filter_requirements": []}
-        try:
-            schemas_rows, _ = coral.run_sql(
-                "SELECT schema_name, COUNT(*) AS table_count FROM coral.tables GROUP BY schema_name ORDER BY table_count DESC"
-            )
-            for row in schemas_rows[:8]:
-                schema = str(row.get("schema_name") or "")
-                catalog_loop["schemas"][schema] = int(row.get("table_count") or 0)
-            top_rows, _ = coral.run_sql(
-                "SELECT schema_name, table_name FROM coral.tables ORDER BY schema_name, table_name LIMIT 20"
-            )
-            catalog_loop["top_tables"] = top_rows
-            filter_rows, _ = coral.run_sql(
-                "SELECT schema_name, table_name, filter_name, required FROM coral.filters WHERE required = true ORDER BY schema_name, table_name, filter_name LIMIT 30"
-            )
-            catalog_loop["filter_requirements"] = filter_rows
-            status = "ok"
-        except Exception as exc:
-            status = "partial"
-            catalog_loop["error"] = str(exc)
+        if planner_mode == "mcp_native":
+            status, catalog_loop = _mcp_catalog_loop(coral)
+            step_name = "mcp_native_catalog_loop"
+        else:
+            catalog_loop = {"schemas": {}, "top_tables": [], "filter_requirements": [], "mode": "mcp_sql"}
+            try:
+                schemas_rows, _ = coral.run_sql(
+                    "SELECT schema_name, COUNT(*) AS table_count FROM coral.tables GROUP BY schema_name ORDER BY table_count DESC"
+                )
+                for row in schemas_rows[:8]:
+                    schema = str(row.get("schema_name") or "")
+                    catalog_loop["schemas"][schema] = int(row.get("table_count") or 0)
+                top_rows, _ = coral.run_sql(
+                    "SELECT schema_name, table_name FROM coral.tables ORDER BY schema_name, table_name LIMIT 20"
+                )
+                catalog_loop["top_tables"] = top_rows
+                filter_rows, _ = coral.run_sql(
+                    "SELECT schema_name, table_name, filter_name, required FROM coral.filters WHERE required = true ORDER BY schema_name, table_name, filter_name LIMIT 30"
+                )
+                catalog_loop["filter_requirements"] = filter_rows
+                status = "ok"
+            except Exception as exc:
+                status = "partial"
+                catalog_loop["error"] = str(exc)
+            step_name = "mcp_catalog_loop"
         workflow_log.append(
             {
-                "step": "mcp_catalog_loop",
+                "step": step_name,
                 "status": status,
                 "detail": catalog_loop,
                 "duration_ms": int((time.perf_counter() - step_start) * 1000),

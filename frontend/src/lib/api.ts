@@ -28,7 +28,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function analyzeIncident(input: {
   incident_id: string
-  planner_mode?: "sql" | "mcp"
+  planner_mode?: "sql" | "mcp" | "mcp_native"
   github_owner?: string
   github_repo?: string
   env_file?: string
@@ -47,7 +47,7 @@ export function analyzeIncident(input: {
 
 export function analyzeIncidentStart(input: {
   incident_id: string
-  planner_mode?: "sql" | "mcp"
+  planner_mode?: "sql" | "mcp" | "mcp_native"
   github_owner?: string
   github_repo?: string
   env_file?: string

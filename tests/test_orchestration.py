@@ -31,3 +31,23 @@ def test_write_workflow_log(tmp_path: Path) -> None:
     write_workflow_log(out, [{"step": "x", "status": "ok"}])
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload[0]["step"] == "x"
+
+
+def test_run_deterministic_workflow_mcp_native_fallback(tmp_path: Path, monkeypatch) -> None:
+    for _, file_name in QUERY_FILES:
+        (tmp_path / file_name).write_text("SELECT 1", encoding="utf-8")
+
+    def fake_run_sql(self, sql: str):
+        return ([{"schema_name": "github", "table_name": "repo_deployments", "required": True}], 1)
+
+    monkeypatch.setattr(CoralClient, "run_sql", fake_run_sql)
+
+    workflow = run_deterministic_workflow(
+        coral=CoralClient("coral"),
+        incident_id="INC-9",
+        sql_dir=tmp_path,
+        extra_vars={"GITHUB_OWNER": "o", "GITHUB_REPO": "r"},
+        planner_mode="mcp_native",
+    )
+    step_names = [str(s.get("step")) for s in workflow.workflow_log]
+    assert "mcp_native_catalog_loop" in step_names
