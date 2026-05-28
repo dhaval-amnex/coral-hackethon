@@ -72,6 +72,8 @@ class QueryRun:
     name: str
     rows: list[dict[str, Any]]
     duration_ms: int
+    attempts: int = 1
+    row_quality_score: float = 0.0
 
 
 class CoralClient:
@@ -93,17 +95,18 @@ class CoralClient:
         lines = [ln for ln in sql.splitlines() if not ln.strip().startswith("--")]
         return "\n".join(lines).strip()
 
-    def _run_with_retry(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+    def _run_with_retry(self, args: list[str]) -> tuple[subprocess.CompletedProcess[str], int]:
         attempt = 0
         while True:
             try:
-                return subprocess.run(
+                proc = subprocess.run(
                     args,
                     capture_output=True,
                     text=True,
                     check=False,
                     timeout=self.timeout_sec,
                 )
+                return proc, attempt + 1
             except subprocess.TimeoutExpired as exc:
                 msg = f"command timed out after {self.timeout_sec}s: {' '.join(args[:3])}"
                 if attempt >= self.retries:
@@ -112,10 +115,14 @@ class CoralClient:
                 attempt += 1
 
     def run_sql(self, sql: str) -> tuple[list[dict[str, Any]], int]:
+        rows, duration_ms, _ = self.run_sql_with_meta(sql)
+        return rows, duration_ms
+
+    def run_sql_with_meta(self, sql: str) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
         sql = self._strip_comments(sql)
         started = time.perf_counter()
         try:
-            proc = self._run_with_retry([self.coral_bin, "sql", "--format", "json", sql])
+            proc, attempts = self._run_with_retry([self.coral_bin, "sql", "--format", "json", sql])
         except FileNotFoundError as exc:
             raise CoralError(self._not_found_message(), category="not_found") from exc
         duration_ms = int((time.perf_counter() - started) * 1000)
@@ -124,9 +131,9 @@ class CoralClient:
             raise CoralError(msg, category=classify_coral_error(msg))
         stdout = proc.stdout.strip()
         if not stdout:
-            return [], duration_ms
+            return [], duration_ms, {"attempts": attempts}
         try:
-            return json.loads(stdout), duration_ms
+            return json.loads(stdout), duration_ms, {"attempts": attempts}
         except json.JSONDecodeError as exc:
             raise CoralError(f"invalid JSON from coral sql: {exc}", category="schema") from exc
 

@@ -70,7 +70,11 @@ def test_run_incident_queries(tmp_path: Path, monkeypatch) -> None:
     def fake_run_sql(self, sql: str):
         return ([{"x": 1}], 1)
 
+    def fake_run_sql_with_meta(self, sql: str):
+        return ([{"x": 1}], 1, {"attempts": 1})
+
     monkeypatch.setattr(CoralClient, "run_sql", fake_run_sql)
+    monkeypatch.setattr(CoralClient, "run_sql_with_meta", fake_run_sql_with_meta)
 
     runs, errors = run_incident_queries(
         CoralClient("coral"),

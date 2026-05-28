@@ -105,10 +105,22 @@ def run_incident_queries(
         sql = render_sql_from_template(path, template_vars)
         sql = apply_table_aliases(sql, table_aliases)
         try:
-            rows, duration_ms = coral.run_sql(sql)
-            runs.append(QueryRun(name=name, rows=rows, duration_ms=duration_ms))
+            if hasattr(coral, "run_sql_with_meta"):
+                rows, duration_ms, meta = coral.run_sql_with_meta(sql)  # type: ignore[attr-defined]
+                attempts = int(meta.get("attempts", 1))
+            else:
+                rows, duration_ms = coral.run_sql(sql)
+                attempts = 1
+            runs.append(
+                QueryRun(
+                    name=name,
+                    rows=rows,
+                    duration_ms=duration_ms,
+                    attempts=attempts,
+                )
+            )
         except CoralError as exc:
-            errors.append(f"{name}: {exc}")
+            errors.append(f"{name}: [{exc.category}] {exc}")
     return runs, errors
 
 
@@ -168,6 +180,17 @@ def _coverage_quality(
     return sum(1 for v in family_ok.values() if v), missing_families, family_ok
 
 
+def _row_quality_score(rows: list[dict[str, Any]]) -> float:
+    if not rows:
+        return 0.0
+    keys = ("service", "repo", "author", "user_name", "metric_name", "title", "text")
+    good = 0
+    for row in rows:
+        if any(str(row.get(k) or "").strip() for k in keys):
+            good += 1
+    return round((good / len(rows)) * 100.0, 2)
+
+
 def _confidence_with_coverage(
     num_query_failures: int,
     evidence_count: int,
@@ -215,9 +238,12 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
     diagnostics: dict[str, Any] = {"queries": {}, "errors": errors}
 
     for run in runs:
+        run.row_quality_score = _row_quality_score(run.rows)
         diagnostics["queries"][run.name] = {
             "rows": len(run.rows),
             "duration_ms": run.duration_ms,
+            "attempts": run.attempts,
+            "row_quality_score": run.row_quality_score,
         }
         all_rows.extend(run.rows)
 
@@ -298,6 +324,7 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
         "max_score": 4,
         "missing_families": missing_families,
         "families": family_ok,
+        "source_availability_influence": round(((4 - coverage_score) / 4) * 100.0, 2),
     }
 
     executive_summary = _make_executive_summary(
