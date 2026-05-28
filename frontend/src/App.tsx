@@ -186,16 +186,22 @@ export function App() {
     ])
     try {
       setStepStatus("Analyze", "running")
+      const demoMetricsLog = "output/run_metrics_live_clean.jsonl"
+      const demoWorkflowLog = "output/workflow_log_live_clean.json"
       const start = await analyzeIncidentStart({
         incident_id: activeIncidentId || "INC-1001",
+        metrics_log: demoMetricsLog,
+        workflow_log: demoWorkflowLog,
       })
       const jobId = start.job_id
       let analyzeDone = false
+      let analyzedIncidentId = activeIncidentId || "INC-1001"
       for (let i = 0; i < 120; i += 1) {
         const status = await getAnalyzeJobStatus(jobId)
         if (status.status === "done" && status.result) {
           setLastAnalyze(status.result)
           setActiveIncidentId(status.result.incident_id)
+          analyzedIncidentId = status.result.incident_id
           setStepStatus("Analyze", "done")
           analyzeDone = true
           break
@@ -213,8 +219,9 @@ export function App() {
 
       setStepStatus("Ship-Readiness", "running")
       const ship = await runShipReadiness({
-        incident_id: activeIncidentId || "INC-1001",
+        incident_id: analyzedIncidentId,
         recent_runs: 1,
+        metrics_log: demoMetricsLog,
       })
       if (!ship.release_check.go_for_submission) {
         setStepStatus("Ship-Readiness", "failed", "go_for_submission=false")
