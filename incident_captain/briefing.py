@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -20,16 +21,71 @@ QUERY_REQUIRED_VARS: dict[str, list[str]] = {
     "deploy_correlation": ["GITHUB_OWNER", "GITHUB_REPO"],
 }
 
+# Preferred table references and fallback candidates discovered from coral.tables.
+TABLE_CANDIDATES: dict[str, list[str]] = {
+    "pagerduty.incidents": [
+        "pagerduty.incidents",
+    ],
+    "github.repo_deployments": [
+        "github.repo_deployments",
+        "github.deployments",
+    ],
+    "datadog.monitors": [
+        "datadog.monitors",
+    ],
+    "slack.users": [
+        "slack.users",
+    ],
+}
+
+
+def discover_table_aliases(coral: CoralClient) -> dict[str, str]:
+    """
+    Resolve preferred table refs to existing catalog tables.
+    Falls back to the preferred value when no candidate is found.
+    """
+    try:
+        rows, _ = coral.run_sql("SELECT schema_name, table_name FROM coral.tables")
+    except CoralError:
+        return {preferred: preferred for preferred in TABLE_CANDIDATES}
+
+    available: set[str] = set()
+    for row in rows:
+        schema = str(row.get("schema_name") or "").strip()
+        table = str(row.get("table_name") or "").strip()
+        if schema and table:
+            available.add(f"{schema}.{table}")
+
+    resolved: dict[str, str] = {}
+    for preferred, candidates in TABLE_CANDIDATES.items():
+        chosen = preferred
+        for candidate in candidates:
+            if candidate in available:
+                chosen = candidate
+                break
+        resolved[preferred] = chosen
+    return resolved
+
+
+def apply_table_aliases(sql: str, table_aliases: dict[str, str]) -> str:
+    rendered = sql
+    for source_ref, target_ref in table_aliases.items():
+        pattern = rf"\b{re.escape(source_ref)}\b"
+        rendered = re.sub(pattern, target_ref, rendered)
+    return rendered
+
 
 def run_incident_queries(
     coral: CoralClient,
     sql_dir: Path,
     incident_id: str,
     extra_vars: dict[str, str] | None = None,
+    table_aliases: dict[str, str] | None = None,
 ) -> tuple[list[QueryRun], list[str]]:
     template_vars: dict[str, str] = {"INCIDENT_ID": incident_id, **(extra_vars or {})}
     runs: list[QueryRun] = []
     errors: list[str] = []
+    table_aliases = table_aliases or {k: k for k in TABLE_CANDIDATES}
     for name, file_name in QUERY_FILES:
         # Skip queries whose required vars are missing or empty.
         required = QUERY_REQUIRED_VARS.get(name, [])
@@ -43,6 +99,7 @@ def run_incident_queries(
             errors.append(f"missing SQL template: {file_name}")
             continue
         sql = render_sql_from_template(path, template_vars)
+        sql = apply_table_aliases(sql, table_aliases)
         try:
             rows, duration_ms = coral.run_sql(sql)
             runs.append(QueryRun(name=name, rows=rows, duration_ms=duration_ms))

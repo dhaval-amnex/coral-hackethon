@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .briefing import QUERY_FILES, compose_brief, run_incident_queries
+from .briefing import QUERY_FILES, compose_brief, discover_table_aliases, run_incident_queries
 from .coral import CoralClient
 from .models import IncidentBrief
 
@@ -29,6 +29,8 @@ def run_deterministic_workflow(
     workflow_log: list[dict[str, Any]] = []
 
     step_start = time.perf_counter()
+    table_aliases = discover_table_aliases(coral)
+    remapped = {k: v for k, v in table_aliases.items() if k != v}
     workflow_log.append(
         {
             "step": "discover_catalog",
@@ -36,6 +38,8 @@ def run_deterministic_workflow(
             "detail": {
                 "mode": "live",
                 "planned_queries": [name for name, _ in QUERY_FILES],
+                "table_aliases": table_aliases,
+                "remapped_tables": remapped,
             },
             "duration_ms": int((time.perf_counter() - step_start) * 1000),
         }
@@ -47,6 +51,7 @@ def run_deterministic_workflow(
         sql_dir=sql_dir,
         incident_id=incident_id,
         extra_vars=extra_vars,
+        table_aliases=table_aliases,
     )
     workflow_log.append(
         {
