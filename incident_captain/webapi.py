@@ -10,7 +10,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .config import validate_source_env
-from .coral import CoralClient, CoralError, load_env_file
+from .coral import CoralClient, CoralError, find_coral_bin, load_env_file
 from .metrics import append_run_metrics
 from .orchestration import run_deterministic_workflow, write_workflow_log
 from .release import write_release_check
@@ -74,7 +74,7 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def _build_coral(payload: dict[str, Any]) -> CoralClient:
     return CoralClient(
-        coral_bin=str(payload.get("coral_bin") or "coral"),
+        coral_bin=str(payload.get("coral_bin") or find_coral_bin()),
         timeout_sec=float(payload.get("coral_timeout_sec") or 30.0),
         retries=int(payload.get("coral_retries") or 2),
         backoff_sec=float(payload.get("coral_backoff_sec") or 0.5),
@@ -107,7 +107,7 @@ class _Handler(BaseHTTPRequestHandler):
             v = validate_source_env(sources)
             health: dict[str, str] = {}
             if v.ok:
-                coral = CoralClient()
+                coral = CoralClient(coral_bin=find_coral_bin())
                 try:
                     health = coral.source_health(sources)
                 except CoralError:
