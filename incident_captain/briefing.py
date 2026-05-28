@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,23 @@ TABLE_CANDIDATES: dict[str, list[str]] = {
     ],
 }
 
+COLUMN_CANDIDATES: dict[str, list[str]] = {
+    "pagerduty.incidents.service__id": ["service__id", "service_id"],
+    "pagerduty.incidents.service__name": ["service__name", "service_name"],
+    "pagerduty.incidents.html_url": ["html_url", "url"],
+    "github.repo_deployments.creator__login": ["creator__login", "author", "creator_login"],
+    "datadog.monitors.modified": ["modified", "updated", "updated_at"],
+    "slack.users.real_name": ["real_name", "display_name", "name"],
+}
+
+FILTER_CANDIDATES: dict[str, list[str]] = {
+    "pagerduty.incidents.created_at": ["created_at", "since"],
+    "github.repo_deployments.owner": ["owner", "org", "organization"],
+    "github.repo_deployments.repo": ["repo", "repository", "name"],
+    "github.repo_deployments.created_at": ["created_at", "since"],
+    "datadog.monitors.modified": ["modified", "updated", "updated_at"],
+}
+
 
 def discover_table_aliases(coral: CoralClient) -> dict[str, str]:
     """
@@ -79,6 +97,100 @@ def apply_table_aliases(sql: str, table_aliases: dict[str, str]) -> str:
     return rendered
 
 
+def _discover_columns(coral: CoralClient) -> dict[str, set[str]]:
+    try:
+        rows, _ = coral.run_sql("SELECT schema_name, table_name, column_name FROM coral.columns")
+    except CoralError:
+        return {}
+    out: dict[str, set[str]] = {}
+    for row in rows:
+        schema = str(row.get("schema_name") or "").strip()
+        table = str(row.get("table_name") or "").strip()
+        col = str(row.get("column_name") or "").strip()
+        if not (schema and table and col):
+            continue
+        key = f"{schema}.{table}"
+        out.setdefault(key, set()).add(col)
+    return out
+
+
+def _discover_filters(coral: CoralClient) -> dict[str, set[str]]:
+    try:
+        rows, _ = coral.run_sql("SELECT schema_name, table_name, filter_name FROM coral.filters")
+    except CoralError:
+        return {}
+    out: dict[str, set[str]] = {}
+    for row in rows:
+        schema = str(row.get("schema_name") or "").strip()
+        table = str(row.get("table_name") or "").strip()
+        name = str(row.get("filter_name") or "").strip()
+        if not (schema and table and name):
+            continue
+        key = f"{schema}.{table}"
+        out.setdefault(key, set()).add(name)
+    return out
+
+
+def discover_field_aliases(coral: CoralClient, table_aliases: dict[str, str]) -> tuple[dict[str, str], dict[str, str]]:
+    columns_by_table = _discover_columns(coral)
+    filters_by_table = _discover_filters(coral)
+    column_aliases: dict[str, str] = {}
+    filter_aliases: dict[str, str] = {}
+
+    for preferred_ref, candidates in COLUMN_CANDIDATES.items():
+        table_ref, _, preferred_col = preferred_ref.rpartition(".")
+        actual_table = table_aliases.get(table_ref, table_ref)
+        available = columns_by_table.get(actual_table, set())
+        chosen = preferred_col
+        for candidate in candidates:
+            if candidate in available:
+                chosen = candidate
+                break
+        if chosen != preferred_col:
+            column_aliases[preferred_ref] = f"{actual_table}.{chosen}"
+
+    for preferred_ref, candidates in FILTER_CANDIDATES.items():
+        table_ref, _, preferred_filter = preferred_ref.rpartition(".")
+        actual_table = table_aliases.get(table_ref, table_ref)
+        available = filters_by_table.get(actual_table, set())
+        chosen = preferred_filter
+        for candidate in candidates:
+            if candidate in available:
+                chosen = candidate
+                break
+        if chosen != preferred_filter:
+            filter_aliases[preferred_ref] = f"{actual_table}.{chosen}"
+
+    return column_aliases, filter_aliases
+
+
+def apply_field_aliases(
+    sql: str,
+    *,
+    table_aliases: dict[str, str],
+    column_aliases: dict[str, str],
+    filter_aliases: dict[str, str],
+) -> str:
+    rendered = sql
+    for source_ref, target_ref in {**column_aliases, **filter_aliases}.items():
+        table_ref, _, source_field = source_ref.rpartition(".")
+        actual_table = table_aliases.get(table_ref, table_ref)
+        target_table, _, target_field = target_ref.rpartition(".")
+        table_pattern = rf"\b{re.escape(table_ref)}\s+(\w+)\b"
+        alias_match = re.search(table_pattern, rendered, flags=re.IGNORECASE)
+        alias = alias_match.group(1) if alias_match else ""
+        if not alias and actual_table != table_ref:
+            actual_pattern = rf"\b{re.escape(actual_table)}\s+(\w+)\b"
+            actual_match = re.search(actual_pattern, rendered, flags=re.IGNORECASE)
+            alias = actual_match.group(1) if actual_match else ""
+        replacement = f"{alias}.{target_field}" if alias else f"{target_table}.{target_field}"
+        rendered = re.sub(rf"\b{re.escape(source_field)}\b", source_field, rendered)
+        if alias:
+            rendered = re.sub(rf"\b{re.escape(alias)}\.{re.escape(source_field)}\b", replacement, rendered)
+        rendered = re.sub(rf"\b{re.escape(actual_table)}\.{re.escape(source_field)}\b", f"{target_table}.{target_field}", rendered)
+    return rendered
+
+
 def run_incident_queries(
     coral: CoralClient,
     sql_dir: Path,
@@ -91,6 +203,7 @@ def run_incident_queries(
     runs: list[QueryRun] = []
     errors: list[str] = []
     table_aliases = table_aliases or {k: k for k in TABLE_CANDIDATES}
+    column_aliases, filter_aliases = discover_field_aliases(coral, table_aliases)
     for name, file_name in QUERY_FILES:
         if enabled_queries is not None and name not in enabled_queries:
             errors.append(f"{name}: skipped by catalog planner")
@@ -110,6 +223,12 @@ def run_incident_queries(
         base_vars.setdefault("WINDOW_HOURS", str(NARROW_WINDOW_HOURS))
         sql = render_sql_from_template(path, base_vars)
         sql = apply_table_aliases(sql, table_aliases)
+        sql = apply_field_aliases(
+            sql,
+            table_aliases=table_aliases,
+            column_aliases=column_aliases,
+            filter_aliases=filter_aliases,
+        )
 
         def _exec(sql_text: str) -> tuple[list[dict[str, Any]], int, int]:
             if hasattr(coral, "run_sql_with_meta"):
@@ -126,6 +245,12 @@ def run_incident_queries(
                 wide_vars = dict(template_vars)
                 wide_vars["WINDOW_HOURS"] = str(WIDE_WINDOW_HOURS)
                 sql_wide = apply_table_aliases(render_sql_from_template(path, wide_vars), table_aliases)
+                sql_wide = apply_field_aliases(
+                    sql_wide,
+                    table_aliases=table_aliases,
+                    column_aliases=column_aliases,
+                    filter_aliases=filter_aliases,
+                )
                 rows_wide, duration_ms_wide, attempts_wide = _exec(sql_wide)
                 if len(rows_wide) > len(rows):
                     rows, duration_ms, attempts = rows_wide, duration_ms_wide, attempts_wide
@@ -141,6 +266,7 @@ def run_incident_queries(
                 )
             )
         except CoralError as exc:
+            runs.append(QueryRun(name=name, rows=[], duration_ms=0, attempts=0, error_category=exc.category))
             errors.append(f"{name}: [{exc.category}] {exc}")
     return runs, errors
 
@@ -186,6 +312,19 @@ def _coverage_quality(
         "telemetry": {"telemetry_context"},
         "comms": {"team_comms"},
     }
+    weights = {"incident": 1.0, "deploy": 1.0, "telemetry": 1.0, "comms": 1.0}
+    raw = os.environ.get("INCIDENT_CAPTAIN_FAMILY_WEIGHTS", "").strip()
+    if raw:
+        for item in raw.split(","):
+            if "=" not in item:
+                continue
+            key, _, val = item.partition("=")
+            k = key.strip().lower()
+            if k in weights:
+                try:
+                    weights[k] = max(0.1, float(val.strip()))
+                except ValueError:
+                    continue
     run_names = {r.name for r in runs}
     failed_names = _extract_failed_query_names(errors)
     if "final_dataset" in run_names and "final_dataset" not in failed_names:
@@ -198,7 +337,10 @@ def _coverage_quality(
         family_ok[family] = ok
         if not ok:
             missing_families.append(family)
-    return sum(1 for v in family_ok.values() if v), missing_families, family_ok
+    total_weight = sum(weights.values()) or 1.0
+    covered = sum(weights[f] for f, ok in family_ok.items() if ok)
+    normalized = int(round((covered / total_weight) * 4))
+    return normalized, missing_families, family_ok
 
 
 def _row_quality_score(rows: list[dict[str, Any]]) -> float:
@@ -266,6 +408,7 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
             "attempts": run.attempts,
             "row_quality_score": run.row_quality_score,
             "window_hours": run.window_hours,
+            "error_category": run.error_category,
         }
         all_rows.extend(run.rows)
 
@@ -347,6 +490,9 @@ def compose_brief(incident_id: str, runs: list[QueryRun], errors: list[str]) -> 
         "missing_families": missing_families,
         "families": family_ok,
         "source_availability_influence": round(((4 - coverage_score) / 4) * 100.0, 2),
+    }
+    diagnostics["query_error_categories"] = {
+        run.name: run.error_category for run in runs if run.error_category
     }
 
     executive_summary = _make_executive_summary(
