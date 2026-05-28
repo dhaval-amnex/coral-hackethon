@@ -81,12 +81,16 @@ def run_incident_queries(
     incident_id: str,
     extra_vars: dict[str, str] | None = None,
     table_aliases: dict[str, str] | None = None,
+    enabled_queries: set[str] | None = None,
 ) -> tuple[list[QueryRun], list[str]]:
     template_vars: dict[str, str] = {"INCIDENT_ID": incident_id, **(extra_vars or {})}
     runs: list[QueryRun] = []
     errors: list[str] = []
     table_aliases = table_aliases or {k: k for k in TABLE_CANDIDATES}
     for name, file_name in QUERY_FILES:
+        if enabled_queries is not None and name not in enabled_queries:
+            errors.append(f"{name}: skipped by catalog planner")
+            continue
         # Skip queries whose required vars are missing or empty.
         required = QUERY_REQUIRED_VARS.get(name, [])
         missing = [v for v in required if not template_vars.get(v)]
