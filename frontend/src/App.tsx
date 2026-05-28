@@ -193,8 +193,9 @@ export function App() {
     ])
     try {
       setStepStatus("Analyze", "running")
-      const demoMetricsLog = "output/run_metrics_live_clean.jsonl"
-      const demoWorkflowLog = "output/workflow_log_live_clean.json"
+      const runId = new Date().toISOString().replace(/[:.]/g, "-")
+      const demoMetricsLog = `output/run_metrics_live_${runId}.jsonl`
+      const demoWorkflowLog = `output/workflow_log_live_${runId}.json`
       const start = await analyzeIncidentStart({
         incident_id: activeIncidentId || "INC-1001",
         planner_mode: "mcp_native",
