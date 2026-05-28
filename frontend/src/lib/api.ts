@@ -85,6 +85,7 @@ export function runShipReadiness(input: {
   output_dir?: string
   report_dir?: string
   metrics_log?: string
+  workflow_log?: string
   recent_runs?: number
   min_progress_percent?: number
   min_scorecard_overall?: number

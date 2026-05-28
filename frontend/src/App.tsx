@@ -233,6 +233,7 @@ export function App() {
         incident_id: analyzedIncidentId,
         recent_runs: 1,
         metrics_log: demoMetricsLog,
+        workflow_log: demoWorkflowLog,
       })
       if (!ship.release_check.go_for_submission) {
         setStepStatus("Ship-Readiness", "failed", "go_for_submission=false")
